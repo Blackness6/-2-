@@ -3,8 +3,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     DB_HOST: str = "localhost"
-    DB_PORT: int = 5432
-    DB_NAME: str = "task_manager"
+    DB_PORT: int = 5432 #fail fast
+    DB_NAME: str = "task_manager" #fail fast
     DB_USER: str = "postgres"
     DB_PASSWORD: str = "postgres"
 
@@ -25,3 +25,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# TODO:
+# remove hard coded secrets.
+# Добавить интерфейсы на репозитории.
+# Добавить DI Container Dishka => сделать рефактор. 
+# Пообщаться с Чатом ГПТ, может стоит выносить сессию вне репозиториев в сервисный слой.

@@ -11,3 +11,4 @@ pydantic[email]
 python-jose[cryptography]
 python-multipart
 email-validator
+dishka

@@ -1,5 +1,8 @@
+from dishka import make_async_container
+from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
+from app.providers import AppProvider, DatabaseProvider
 from app.routers import auth, tasks
 
 app = FastAPI(
@@ -8,6 +11,12 @@ app = FastAPI(
     version="1.0.0",
 )
 
+container = make_async_container(DatabaseProvider(), AppProvider())
+setup_dishka(container, app=app)
+
+app.include_router(tasks.router)
+app.include_router(auth.router)
+
 
 @app.get("/", tags=["Health"])
 def root():
@@ -15,8 +24,3 @@ def root():
         "status": "ok",
         "docs": "/docs",
     }
-
-
-# Подключение роутеров
-app.include_router(tasks.router)
-app.include_router(auth.router)

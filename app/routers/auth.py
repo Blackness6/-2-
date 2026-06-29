@@ -1,51 +1,28 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from fastapi import APIRouter
 
-from app.database import get_db
-from app.repositories.user_repository import UserRepository
-from app.schemas import (
-    UserCreate,
-    UserLogin,
-    UserResponse,
-    Token,
-)
+from app.schemas import UserCreate, UserLogin, UserResponse, Token
 from app.services.auth_service import AuthService
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
+    route_class=DishkaRoute,
 )
 
 
-@router.post(
-    "/register",
-    response_model=UserResponse,
-    status_code=201,
-)
+@router.post("/register", response_model=UserResponse, status_code=201)
 def register(
     data: UserCreate,
-    db: Session = Depends(get_db),
+    service: FromDishka[AuthService],
 ):
-    repository = UserRepository(db)
-    service = AuthService(repository)
-
     return service.register(data)
 
 
-@router.post(
-    "/login",
-    response_model=Token,
-)
+@router.post("/login", response_model=Token)
 def login(
     data: UserLogin,
-    db: Session = Depends(get_db),
+    service: FromDishka[AuthService],
 ):
-    repository = UserRepository(db)
-    service = AuthService(repository)
-
     token = service.login(data)
-
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-    }
+    return {"access_token": token, "token_type": "bearer"}
