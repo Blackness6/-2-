@@ -9,7 +9,7 @@ class AuthService:
     def __init__(self, repository: UserRepository):
         self.repository= repository
 
-    def register_user(self, data: UserCreate) -> User:
+    def register(self, data: UserCreate) -> User:
 
         existing_user = self.repository.get_by_email(data.email)
 
@@ -42,7 +42,7 @@ class AuthService:
             
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                DETAIL="Invalid email or password",)
+                detail="Invalid email or password",)
         
         token =create_access_token({"sub": str(user.id)})
         return token
