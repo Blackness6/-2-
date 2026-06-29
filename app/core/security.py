@@ -16,9 +16,9 @@ def verify_password(plain_password: str, hashed_password: str ) -> bool:
     """Проверка пароля."""
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_access_token ( date: dict )-> str:
+def create_access_token ( data: dict )-> str:
     """Создание JWT токена."""
-    to_encode = date.copy()
+    to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(
         minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
@@ -30,12 +30,12 @@ def create_access_token ( date: dict )-> str:
         algorithm=settings.ALGORITHM,
     )   
 
-def decode_access_token(tokeb: str ) -> dict:
+def decode_access_token(token: str ) -> dict:
     """Декодирование JWT токена."""
 
     try:
         payload = jwt.decode(
-            tokeb,
+            token,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
