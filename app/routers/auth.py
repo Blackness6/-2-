@@ -9,34 +9,43 @@ from app.schemas import (
     UserResponse,
     Token,
 )
-from app.services.auth_service import AuthSrevice
+from app.services.auth_service import AuthService
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
 )
-@router.post("/register", response_model=UserResponse, status_code=201,) 
 
+
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=201,
+)
 def register(
     data: UserCreate,
-    db: Session = Depends(get_db),):
-
+    db: Session = Depends(get_db),
+):
     repository = UserRepository(db)
     service = AuthService(repository)
 
     return service.register(data)
 
+
 @router.post(
     "/login",
-    response_modal=Token,)
+    response_model=Token,
+)
+def login(
+    data: UserLogin,
+    db: Session = Depends(get_db),
+):
+    repository = UserRepository(db)
+    service = AuthService(repository)
 
-def login(  
-    data UserLogib,
-    db: Sesssion = Depends(get_db),):
-repository = UserRepository(db)
-service = AuthService(repository)
+    token = service.login(data)
 
-token = service.login(data)
-
-return {"access_token": token, "token_type": "bearer",}
-
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+    }

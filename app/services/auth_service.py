@@ -5,7 +5,7 @@ from app.models import User
 from app.repositories.user_repository import UserRepository
 from app.schemas import UserCreate, UserLogin
 
-class AuthSrevice:
+class AuthService:
     def __init__(self, repository: UserRepository):
         self.repository= repository
 
