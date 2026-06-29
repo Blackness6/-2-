@@ -3,12 +3,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.security import get_current_user_id
 from app.database import get_db
 from app.repositories.task_repository import TaskRepository
 from app.schemas import TaskCreate, TaskUpdate, TaskResponse, TaskStats, TaskStatus
 from app.services.task_service import TaskService
 
-router = APIRouter(prefix="/api/tasks", tags=["tasks"])
+router = APIRouter(
+    prefix="/api/tasks",
+    tags=["tasks"],
+    dependencies=[Depends(get_current_user_id)],
+)
 
 
 def get_service(db: Session = Depends(get_db)) -> TaskService:
