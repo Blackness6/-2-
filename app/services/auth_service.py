@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status 
 
-from app.core.security import (hash_password, verify_password , create_acces_token,)
+from app.core.security import (hash_password, verify_password , create_access_token,)
 from app.models import User
 from app.repositories.user_repository import UserRepository
 from app.schemas import UserCreate, UserLogin
@@ -44,5 +44,5 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 DETAIL="Invalid email or password",)
         
-        token =create_acces_token({"sub": str(user.id)})
+        token =create_access_token({"sub": str(user.id)})
         return token
