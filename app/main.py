@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 
 from app.routers.tasks import router as tasks_router
-
+from app.routers import tasks
+from app.routers import auth
 
 app = FastAPI(
     title="Task Manager API",
@@ -15,3 +16,6 @@ app.include_router(tasks_router)
 @app.get("/", tags=["health"])
 def root():
     return {"status": "ok", "docs": "/docs"}
+
+app.include_router(tasks.router)
+app.include_router(auth.router)
