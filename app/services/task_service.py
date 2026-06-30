@@ -28,7 +28,9 @@ class TaskService:
             created_at=now,
             updated_at=now,
         )
-        return self.repo.create(task)
+        task = self.repo.create(task)
+        self.repo.commit()
+        return task
 
     def get_tasks(
         self,
@@ -52,11 +54,14 @@ class TaskService:
         for field, value in update_data.items():
             setattr(task, field, value)
         task.updated_at = _utcnow()
-        return self.repo.update(task)
+        task = self.repo.update(task)
+        self.repo.commit()
+        return task
 
     def delete_task(self, task_id: int) -> None:
         task = self.get_task(task_id)
         self.repo.delete(task)
+        self.repo.commit()
 
     def get_stats(self) -> TaskStats:
         raw = self.repo.get_stats()

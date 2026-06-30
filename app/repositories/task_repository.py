@@ -12,7 +12,7 @@ class TaskRepository(ITaskRepository):
 
     def create(self, task: Task) -> Task:
         self.db.add(task)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(task)
         return task
 
@@ -32,12 +32,15 @@ class TaskRepository(ITaskRepository):
         return list(self.db.scalars(stmt).all())
 
     def update(self, task: Task) -> Task:
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(task)
         return task
 
     def delete(self, task: Task) -> None:
         self.db.delete(task)
+        self.db.flush()
+
+    def commit(self) -> None:
         self.db.commit()
 
     def get_stats(self) -> dict[str, int]:
@@ -47,3 +50,4 @@ class TaskRepository(ITaskRepository):
             .group_by(Task.status)
         ).all()
         return {row.status: row.cnt for row in rows}
+    

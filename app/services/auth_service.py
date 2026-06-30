@@ -27,8 +27,10 @@ class AuthService:
            email=data.email,
            hashed_password=hash_password(data.password),
         )
-        return self.repository.create(user)
-    
+        user = self.repository.create(user)
+        self.repository.commit()
+        return user
+
     def login(self, data: UserLogin) -> str:
         user = self.repository.get_by_email(data.email)
         
