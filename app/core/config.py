@@ -2,13 +2,13 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DB_HOST: str = "localhost"
-    DB_PORT: int = 5432 #fail fast
-    DB_NAME: str = "task_manager" #fail fast
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "postgres"
+    DB_HOST: str
+    DB_PORT: int 
+    DB_NAME: str 
+    DB_USER: str
+    DB_PASSWORD: str 
 
-    SECRET_KEY: str = "super-secret-key-change-me"
+    SECRET_KEY: str 
 
     ALGORITHM: str = "HS256"
 
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    model_config = {"env_file": ".env", "extra": "ignore"}  
 
 
 settings = Settings()

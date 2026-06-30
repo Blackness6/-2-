@@ -27,6 +27,7 @@ services:
       DB_NAME: task_manager
       DB_USER: beibarys
       DB_PASSWORD: postgres
+      SECRET_KEY: super-secret-key-change-me
     depends_on:
       db:
         condition: service_healthy
