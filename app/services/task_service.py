@@ -4,9 +4,10 @@ from fastapi import HTTPException
 from fastapi import status as http_status  # переименовали чтобы не конфликтовало
 
 from app.models import Task
-from app.repositories.task_repository import TaskRepository
+
 from app.schemas import TaskCreate, TaskUpdate, TaskStats
 
+from app.interfaces.task_repository import ITaskRepository
 
 def _utcnow() -> datetime:
     """Текущее время UTC без tzinfo (совместимо с SQLite)."""
@@ -14,7 +15,7 @@ def _utcnow() -> datetime:
 
 
 class TaskService:
-    def __init__(self, repo: TaskRepository):
+    def __init__(self, repo: ITaskRepository):
         self.repo = repo
 
     def create_task(self, data: TaskCreate) -> Task:

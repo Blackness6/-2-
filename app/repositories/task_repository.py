@@ -3,8 +3,10 @@ from sqlalchemy.orm import Session
 
 from app.models import Task
 
+from app.interfaces.task_repository import ITaskRepository 
 
-class TaskRepository:
+
+class TaskRepository(ITaskRepository):
     def __init__(self, db: Session):
         self.db = db
 

@@ -9,6 +9,9 @@ from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from app.services.task_service import TaskService
 
+from app.interfaces.task_repository import ITaskRepository
+
+from app.interfaces.user_repository import IUserRepository
 
 class DatabaseProvider(Provider):
     @provide(scope=Scope.REQUEST)
@@ -22,17 +25,17 @@ class DatabaseProvider(Provider):
 
 class AppProvider(Provider):
     @provide(scope=Scope.REQUEST)
-    def get_task_repository(self, db: Session) -> TaskRepository:
+    def get_task_repository(self, db: Session) -> ITaskRepository:
         return TaskRepository(db)
 
     @provide(scope=Scope.REQUEST)
-    def get_user_repository(self, db: Session) -> UserRepository:
+    def get_user_repository(self, db: Session) -> IUserRepository:
         return UserRepository(db)
 
     @provide(scope=Scope.REQUEST)
-    def get_task_service(self, repo: TaskRepository) -> TaskService:
+    def get_task_service(self, repo: ITaskRepository) -> TaskService:
         return TaskService(repo)
 
     @provide(scope=Scope.REQUEST)
-    def get_auth_service(self, repo: UserRepository) -> AuthService:
+    def get_auth_service(self, repo: IUserRepository) -> AuthService:
         return AuthService(repo)

@@ -2,11 +2,14 @@ from fastapi import HTTPException, status
 
 from app.core.security import (hash_password, verify_password , create_access_token,)
 from app.models import User
-from app.repositories.user_repository import UserRepository
+
 from app.schemas import UserCreate, UserLogin
 
+from app.interfaces.user_repository import IUserRepository
+
+
 class AuthService:
-    def __init__(self, repository: UserRepository):
+    def __init__(self, repository: IUserRepository):
         self.repository= repository
 
     def register(self, data: UserCreate) -> User:
