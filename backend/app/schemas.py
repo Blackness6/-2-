@@ -1,33 +1,41 @@
 from datetime import datetime
-from typing import Literal
+from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
-from pydantic import EmailStr 
 
-TaskStatus = Literal["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]
-TaskPriority = Literal[1, 2, 3]
+class TaskStatus(str, Enum):
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    DONE = "DONE"
+    CANCELLED = "CANCELLED"
+
+
+class TaskPriorityEnum(int, Enum):
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
 
 
 class TaskCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
-    priority: TaskPriority = 2
+    priority: TaskPriorityEnum = TaskPriorityEnum.MEDIUM
 
 
 class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     status: TaskStatus | None = None
-    priority: TaskPriority | None = None
+    priority: TaskPriorityEnum | None = None
 
 
 class TaskResponse(BaseModel):
     id: int
     title: str
     description: str | None
-    status: TaskStatus    # было str
-    priority: TaskPriority  # было int
+    status: TaskStatus
+    priority: TaskPriorityEnum
     created_at: datetime
     updated_at: datetime
 
@@ -40,14 +48,17 @@ class TaskStats(BaseModel):
     DONE: int = 0
     CANCELLED: int = 0
 
+
 class UserCreate(BaseModel):
-    username: str=Field(min_length=3, max_length=100)
-    email:EmailStr
-    password:str=Field(min_length=8)
+    username: str = Field(..., min_length=3, max_length=100)
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+
 
 class UserLogin(BaseModel):
-    email:EmailStr
-    password:str
+    email: EmailStr
+    password: str
+
 
 class UserResponse(BaseModel):
     id: int
@@ -57,7 +68,7 @@ class UserResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
-
