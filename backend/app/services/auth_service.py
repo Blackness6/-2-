@@ -51,3 +51,14 @@ class AuthService:
         
         token =create_access_token({"sub": str(user.id)})
         return token
+    
+    def get_account(self, user_id: int) -> User:
+        user = self.repository.get_by_id(user_id)
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        return user

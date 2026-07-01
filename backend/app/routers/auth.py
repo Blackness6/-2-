@@ -1,5 +1,7 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from app.core.security import get_current_user_id
 
 from app.schemas import UserCreate, UserLogin, UserResponse, Token
 from app.services.auth_service import AuthService
@@ -26,3 +28,11 @@ def login(
 ):
     token = service.login(data)
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/me", response_model=UserResponse)
+def get_account(
+    service: FromDishka[AuthService],
+    user_id: int = Depends(get_current_user_id),
+):
+    return service.get_account(user_id)
