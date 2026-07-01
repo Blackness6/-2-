@@ -32,7 +32,3 @@ class ITaskRepository(ABC):
     @abstractmethod
     def get_stats(self) ->  dict [str, int]:
         pass
-
-    @abstractmethod
-    def commit(self) -> None:
-        pass

@@ -1,4 +1,5 @@
-from fastapi import HTTPException, status 
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.core.security import (hash_password, verify_password , create_access_token,)
 from app.models import User
@@ -9,7 +10,8 @@ from app.interfaces.user_repository import IUserRepository
 
 
 class AuthService:
-    def __init__(self, repository: IUserRepository):
+    def __init__(self, db: Session, repository: IUserRepository):
+        self.db = db
         self.repository= repository
 
     def register(self, data: UserCreate) -> User:
@@ -20,15 +22,19 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered",
-            )  
-        
+            )
+
         user = User(
            username=data.username,
            email=data.email,
            hashed_password=hash_password(data.password),
         )
-        user = self.repository.create(user)
-        self.repository.commit()
+        try:
+            user = self.repository.create(user)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         return user
 
     def login(self, data: UserLogin) -> str:

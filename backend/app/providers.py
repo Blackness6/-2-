@@ -33,9 +33,9 @@ class AppProvider(Provider):
         return UserRepository(db)
 
     @provide(scope=Scope.REQUEST)
-    def get_task_service(self, repo: ITaskRepository) -> TaskService:
-        return TaskService(repo)
+    def get_task_service(self, db: Session, repo: ITaskRepository) -> TaskService:
+        return TaskService(db, repo)
 
     @provide(scope=Scope.REQUEST)
-    def get_auth_service(self, repo: IUserRepository) -> AuthService:
-        return AuthService(repo)
+    def get_auth_service(self, db: Session, repo: IUserRepository) -> AuthService:
+        return AuthService(db, repo)

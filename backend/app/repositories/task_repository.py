@@ -40,9 +40,6 @@ class TaskRepository(ITaskRepository):
         self.db.delete(task)
         self.db.flush()
 
-    def commit(self) -> None:
-        self.db.commit()
-
     def get_stats(self) -> dict[str, int]:
         """GROUP BY статус — SQL-агрегация."""
         rows = self.db.execute(

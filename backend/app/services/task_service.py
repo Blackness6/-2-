@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from fastapi import status as http_status  # переименовали чтобы не конфликтовало
+from sqlalchemy.orm import Session
 
 from app.models import Task
 
@@ -15,7 +16,8 @@ def _utcnow() -> datetime:
 
 
 class TaskService:
-    def __init__(self, repo: ITaskRepository):
+    def __init__(self, db: Session, repo: ITaskRepository):
+        self.db = db
         self.repo = repo
 
     def create_task(self, data: TaskCreate) -> Task:
@@ -28,8 +30,12 @@ class TaskService:
             created_at=now,
             updated_at=now,
         )
-        task = self.repo.create(task)
-        self.repo.commit()
+        try:
+            task = self.repo.create(task)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         return task
 
     def get_tasks(
@@ -54,14 +60,22 @@ class TaskService:
         for field, value in update_data.items():
             setattr(task, field, value)
         task.updated_at = _utcnow()
-        task = self.repo.update(task)
-        self.repo.commit()
+        try:
+            task = self.repo.update(task)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         return task
 
     def delete_task(self, task_id: int) -> None:
         task = self.get_task(task_id)
-        self.repo.delete(task)
-        self.repo.commit()
+        try:
+            self.repo.delete(task)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
 
     def get_stats(self) -> TaskStats:
         raw = self.repo.get_stats()

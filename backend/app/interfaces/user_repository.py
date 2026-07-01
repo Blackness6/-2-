@@ -15,7 +15,3 @@ class IUserRepository(ABC):
     @abstractmethod
     def get_by_id(self, user_id: str) -> User | None:
         pass
-
-    @abstractmethod
-    def commit(self) -> None:
-        pass
