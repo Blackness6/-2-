@@ -27,7 +27,5 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # TODO:
-# remove hard coded secrets.
-# Добавить интерфейсы на репозитории.
-# Добавить DI Container Dishka => сделать рефактор. 
-# Пообщаться с Чатом ГПТ, может стоит выносить сессию вне репозиториев в сервисный слой.
+# Разобраться с раб гитой 
+#настроить гитхаб sisd  
