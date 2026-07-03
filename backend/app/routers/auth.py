@@ -36,3 +36,10 @@ def get_account(
     user_id: int = Depends(get_current_user_id),
 ):
     return service.get_account(user_id)
+
+@router.get("/logout", response_model=None, status_code=204)
+def logout(
+    service: FromDishka[AuthService],
+    user_id: int = Depends(get_current_user_id),
+):
+    service.logout(user_id)
