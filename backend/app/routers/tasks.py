@@ -21,20 +21,6 @@ def create_task(
     return service.create_task(data)
 
 
-@router.get("/stats", response_model=TaskStats)
-def get_stats(
-    service: FromDishka[TaskService],
-):
-    return service.get_stats()
-
-
-@router.get("", response_model=list[TaskResponse])
-def get_tasks(
-    service: FromDishka[TaskService],
-    status: TaskStatus | None = Query(default=None),
-    priority: int | None = Query(default=None),
-):
-    return service.get_tasks(status=status, priority=priority)
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
