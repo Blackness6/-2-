@@ -1,0 +1,66 @@
+name: CI
+
+# Когда запускать проверки:
+on:
+  push:
+    branches: [ main ]   # при попадании кода в главную ветку
+  pull_request:          # при любом Pull Request
+
+jobs:
+  # ─── Бэкенд: тесты на pytest (SQLite in-memory) ──────────────────────────
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend   # весь Python-код лежит в backend/
+    steps:
+      - uses: actions/checkout@v4    # склонировать репозиторий на runner
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"     # та же версия, что и в backend/Dockerfile
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Установить зависимости
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Прогнать тесты
+        # python -m pytest (а не просто pytest): так backend/ попадает в
+        # sys.path и пакет app импортируется. С голым pytest — ModuleNotFoundError.
+        run: python -m pytest
+        env:
+          # Settings() требует эти переменные при импорте config.py.
+          # Тесты работают на SQLite, поэтому значения — заглушки.
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: test
+          DB_USER: test
+          DB_PASSWORD: test
+          SECRET_KEY: test-secret-for-ci
+
+  # ─── Фронтенд: линтер + сборка (проверка типов TypeScript) ───────────────
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"         # та же версия, что и в frontend/Dockerfile
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Установить зависимости
+        run: npm ci
+
+      - name: Линтер
+        run: npm run lint
+
+      - name: Сборка
+        run: npm run build
