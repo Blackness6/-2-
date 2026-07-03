@@ -27,3 +27,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # TODO:
+#прекоммит
+#препуш
+#cicd
+# как следует сделать
