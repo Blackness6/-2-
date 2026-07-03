@@ -27,5 +27,3 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # TODO:
-# Разобраться с раб гитой 
-#настроить гитхаб sisd  
