@@ -34,6 +34,12 @@ export default function Tasks() {
   const [priority, setPriority] = useState<TaskPriority>(2);
   const [creating, setCreating] = useState(false);
 
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPriority, setEditPriority] = useState<TaskPriority>(2);
+  const [saving, setSaving] = useState(false);
+
   const filters = useMemo(
     () => ({
       status: statusFilter || undefined,
@@ -94,6 +100,36 @@ export default function Tasks() {
     } catch {
       setError("Не удалось обновить статус");
       load();
+    }
+  }
+
+  function startEdit(task: Task) {
+    setEditingId(task.id);
+    setEditTitle(task.title);
+    setEditDescription(task.description ?? "");
+    setEditPriority(task.priority);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function handleUpdate(e: FormEvent, task: Task) {
+    e.preventDefault();
+    if (!editTitle.trim()) return;
+    setSaving(true);
+    try {
+      const updated = await tasksApi.updateTask(task.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+        priority: editPriority,
+      });
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+      setEditingId(null);
+    } catch {
+      setError("Не удалось обновить задачу");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -198,26 +234,65 @@ export default function Tasks() {
         <ul className="task-list">
           {tasks.map((task) => (
             <li className={`task-card priority-${task.priority}`} key={task.id}>
-              <div className="task-main">
-                <h3>{task.title}</h3>
-                {task.description && <p>{task.description}</p>}
-                <span className="task-priority">{PRIORITY_LABELS[task.priority]}</span>
-              </div>
-              <div className="task-actions">
-                <select
-                  value={task.status}
-                  onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABELS[s]}
-                    </option>
-                  ))}
-                </select>
-                <button className="btn-danger" onClick={() => handleDelete(task)}>
-                  Удалить
-                </button>
-              </div>
+              {editingId === task.id ? (
+                <form className="task-edit-form" onSubmit={(e) => handleUpdate(e, task)}>
+                  <input
+                    type="text"
+                    placeholder="Название задачи"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Описание (необязательно)"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                  />
+                  <select
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(Number(e.target.value) as TaskPriority)}
+                  >
+                    {([1, 2, 3] as TaskPriority[]).map((p) => (
+                      <option key={p} value={p}>
+                        {PRIORITY_LABELS[p]}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="task-actions">
+                    <button type="submit" disabled={saving}>
+                      {saving ? "Сохранение..." : "Сохранить"}
+                    </button>
+                    <button type="button" className="btn-ghost" onClick={cancelEdit}>
+                      Отмена
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="task-main">
+                    <h3>{task.title}</h3>
+                    {task.description && <p>{task.description}</p>}
+                    <span className="task-priority">{PRIORITY_LABELS[task.priority]}</span>
+                  </div>
+                  <div className="task-actions">
+                    <select
+                      value={task.status}
+                      onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {STATUS_LABELS[s]}
+                        </option>
+                      ))}
+                    </select>
+                    <button onClick={() => startEdit(task)}>Изменить</button>
+                    <button className="btn-danger" onClick={() => handleDelete(task)}>
+                      Удалить
+                    </button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
