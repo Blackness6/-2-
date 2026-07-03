@@ -20,3 +20,10 @@ class UserRepository(IUserRepository):
     def get_by_id(self, user_id: int) -> User | None:
         return self.db.get(User, user_id)
 
+
+
+
+
+
+
+#defdaws
