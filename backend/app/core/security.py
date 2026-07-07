@@ -48,4 +48,10 @@ def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(http
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-      
+        payload = decode_access_token(credentials.credentials)
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise credentials_error
+        return int(user_id)
+    except ValueError:
+        raise credentials_error
