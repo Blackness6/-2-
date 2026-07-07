@@ -148,7 +148,7 @@ export default function Tasks() {
   return (
     <div className="tasks-page">
       <header className="tasks-header">
-        <h1>Мои Незадачи</h1>
+        <h1>Мои Незадачиит нету</h1>
         <div className="tasks-header-user">
           <span>{user?.username}</span>
           <button className="btn-ghost" onClick={logout}>
