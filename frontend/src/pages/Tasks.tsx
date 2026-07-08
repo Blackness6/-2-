@@ -151,7 +151,7 @@ export default function Tasks() {
         <h1>Мои задачи Qa</h1>
         <div className="tasks-header-user">
           <span>{user?.username}</span>
-          <button className="btn-ghost" onClick={logout}>
+          <button className="btn-ghost" onClick={logout}>s
             Выйти
           </button>
         </div>
