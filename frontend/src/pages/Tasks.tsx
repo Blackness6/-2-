@@ -148,7 +148,7 @@ export default function Tasks() {
   return (
     <div className="tasks-page">
       <header className="tasks-header">
-        <h1>Мои Задачи:
+        <h1>Мои Задачи Важные
         </h1>
         <div className="tasks-header-user">
           <span>{user?.username}</span>
