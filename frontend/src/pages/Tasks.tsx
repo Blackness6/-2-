@@ -152,7 +152,7 @@ export default function Tasks() {
         </h1>
         <div className="tasks-header-user">
           <span>{user?.username}</span>
-          <button className="btn-ghost" onClick={logout}>s
+          <button className="btn-ghost" onClick={logout}>
             Выйти
           </button>
         </div>
