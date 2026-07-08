@@ -19,17 +19,6 @@ class TaskRepository(ITaskRepository):
     def get_by_id(self, task_id: int) -> Task | None:
         return self.db.get(Task, task_id)
 
-    def get_all(    
-        self,
-        status: str | None = None,
-        priority: int | None = None,
-    ) -> list[Task]:
-        stmt = select(Task)
-        if status is not None:
-            stmt = stmt.where(Task.status == status)
-        if priority is not None:
-            stmt = stmt.where(Task.priority == priority)
-        return list(self.db.scalars(stmt).all())
 
     def update(self, task: Task) -> Task:
         self.db.flush()
