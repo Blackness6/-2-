@@ -62,5 +62,8 @@ jobs:
       - name: Линтер
         run: npm run lint
 
+      - name: Тесты
+        run: npm test           # vitest run — разовый прогон без watch
+
       - name: Сборка
         run: npm run build
