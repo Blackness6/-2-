@@ -9,6 +9,12 @@ from app.routers import auth, tasks
 from app.core.logging import setup_logging
 from app.middleware.logging_middleware import LoggingMiddleware
 
+from app.middleware.metrics_middleware import MetricsMiddleware
+
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from starlette.responses import Response
+
+
 app = FastAPI(
     title="Task Manager API",
     description="REST API для управления задачами — FastAPI + PostgreSQL",
@@ -50,3 +56,12 @@ app.add_middleware(CORSMiddleware,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(MetricsMiddleware)
+
+@app.get("/metrics",include_in_schema=False)
+def metrics():
+    return Response(
+        content = generate_latest(),
+        media_type = CONTENT_TYPE_LATEST,
+    )
