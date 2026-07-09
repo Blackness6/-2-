@@ -12,3 +12,4 @@ python-jose[cryptography]
 python-multipart
 email-validator
 dishka
+prometheus-client
