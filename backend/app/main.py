@@ -23,6 +23,10 @@ app = FastAPI(
 
 setup_logging()
 
+app.add_middleware(LoggingMiddleware)
+app.add_middleware(MetricsMiddleware)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -34,8 +38,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 container = make_async_container(DatabaseProvider(), AppProvider())
 setup_dishka(container, app=app)
+
 
 app.include_router(tasks.router)
 app.include_router(auth.router)
@@ -48,16 +54,6 @@ def root():
         "docs": "/docs",
     }
 
-app.add_middleware(LoggingMiddleware)
-
-app.add_middleware(CORSMiddleware, 
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.add_middleware(MetricsMiddleware)
 
 @app.get("/metrics",include_in_schema=False)
 def metrics():
