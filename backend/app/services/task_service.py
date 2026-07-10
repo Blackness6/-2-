@@ -20,7 +20,7 @@ class TaskService:
         self.db = db
         self.repo = repo
 
-    def create_task(self, data: TaskCreate) -> Task:
+    def create_task(self, data: TaskCreate, user_id: int) -> Task:
         now = _utcnow()
         task = Task(
             title=data.title,
@@ -29,6 +29,7 @@ class TaskService:
             priority=data.priority,
             created_at=now,
             updated_at=now,
+            user_id=user_id,
         )
         try:
             task = self.repo.create(task)
@@ -40,13 +41,14 @@ class TaskService:
 
     def get_tasks(
         self,
+        user_id: int,
         status: str | None = None,
         priority: int | None = None,
     ) -> list[Task]:
-        return self.repo.get_all(status=status, priority=priority)
+        return self.repo.get_all(user_id=user_id, status=status, priority=priority)
 
-    def get_task(self, task_id: int) -> Task:
-        task = self.repo.get_by_id(task_id)
+    def get_task(self, task_id: int, user_id: int) -> Task:
+        task = self.repo.get_by_id(task_id, user_id)
         if task is None:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND,
@@ -54,8 +56,8 @@ class TaskService:
             )
         return task
 
-    def update_task(self, task_id: int, data: TaskUpdate) -> Task:
-        task = self.get_task(task_id)
+    def update_task(self, task_id: int, data: TaskUpdate, user_id: int) -> Task:
+        task = self.get_task(task_id, user_id)
         update_data = data.model_dump(exclude_none=True)
         for field, value in update_data.items():
             setattr(task, field, value)
@@ -68,8 +70,8 @@ class TaskService:
             raise
         return task
 
-    def delete_task(self, task_id: int) -> None:
-        task = self.get_task(task_id)
+    def delete_task(self, task_id: int, user_id: int) -> None:
+        task = self.get_task(task_id, user_id)
         try:
             self.repo.delete(task)
             self.db.commit()
@@ -77,8 +79,8 @@ class TaskService:
             self.db.rollback()
             raise
 
-    def get_stats(self) -> TaskStats:
-        raw = self.repo.get_stats()
+    def get_stats(self, user_id: int) -> TaskStats:
+        raw = self.repo.get_stats(user_id)
         return TaskStats(
             TODO=raw.get("TODO", 0),
             IN_PROGRESS=raw.get("IN_PROGRESS", 0),

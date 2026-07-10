@@ -10,12 +10,13 @@ class ITaskRepository(ABC):
 
 
     @abstractmethod
-    def get_by_id(self, task_id : int) -> Task | None:
+    def get_by_id(self, task_id : int, user_id: int) -> Task | None:
         pass
 
     @abstractmethod
     def get_all(
-        self, 
+        self,
+        user_id: int,
         status: str | None = None,
         priority: int | None = None,
         ) ->  list[Task]:
@@ -30,5 +31,5 @@ class ITaskRepository(ABC):
         pass
 
     @abstractmethod
-    def get_stats(self) ->  dict [str, int]:
+    def get_stats(self, user_id: int) ->  dict [str, int]:
         pass
