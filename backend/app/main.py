@@ -39,7 +39,10 @@ app.add_middleware(
 )
 
 
-container = make_async_container(DatabaseProvider(), AppProvider())
+container = make_async_container(
+    DatabaseProvider(), 
+    AppProvider())
+
 setup_dishka(container, app=app)
 
 
