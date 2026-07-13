@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AuthProvider, useAuth } from "./AuthContext";
-import * as authApi from "../api/auth";
-import type { User } from "../api/types";
+import { AuthProvider } from "./AuthContext";
+import { useAuth } from "../hooks/useAuth";
+import * as authApi from "../api/authApi";
+import type { User } from "../types/user";
 
-vi.mock("../api/auth");
+vi.mock("../api/authApi");
 
 const mockedAuth = vi.mocked(authApi);
 

@@ -1,9 +1,13 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
+import Button from "../../components/common/Button";
+import ErrorMessage from "../../components/common/ErrorMessage";
+import Input from "../../components/common/Input";
+import "../auth.css";
 
-export default function Register() {
+export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -30,39 +34,33 @@ export default function Register() {
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1>Регистрация</h1>
-        {error && <div className="form-error">{error}</div>}
-        <label>
-          Имя пользователя
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            minLength={3}
-            required
-          />
-        </label>
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Пароль
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
-          />
-        </label>
-        <button type="submit" disabled={submitting}>
+        <ErrorMessage message={error} />
+        <Input
+          label="Имя пользователя"
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          minLength={3}
+          required
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <Input
+          label="Пароль"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          minLength={8}
+          required
+        />
+        <Button type="submit" disabled={submitting}>
           {submitting ? "Создание..." : "Зарегистрироваться"}
-        </button>
+        </Button>
         <p className="auth-switch">
           Уже есть аккаунт? <Link to="/login">Войти</Link>
         </p>
