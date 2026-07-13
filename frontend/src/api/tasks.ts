@@ -21,6 +21,13 @@ export async function updateTask(id: number, payload: TaskUpdate) {
   return data;
 }
 
+export async function assignTask(id: number, assigneeId: number | null) {
+  const { data } = await api.patch<Task>(`/api/tasks/${id}/assign`, {
+    assignee_id: assigneeId,
+  });
+  return data;
+}
+
 export async function deleteTask(id: number) {
   await api.delete(`/api/tasks/${id}`);
 }

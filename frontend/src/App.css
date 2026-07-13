@@ -277,6 +277,68 @@
   color: var(--text-h);
 }
 
+.task-actions-stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.task-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.task-actions-row > select,
+.task-actions-row > button {
+  flex: 1;
+}
+
+.task-edit-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-edit-form input[type="text"],
+.task-edit-form select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.task-edit-form input:focus,
+.task-edit-form select:focus {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+.task-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-edit-row .task-actions {
+  margin-left: auto;
+}
+
+.btn-primary {
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-danger {
   border: 1px solid transparent;
   border-radius: 8px;

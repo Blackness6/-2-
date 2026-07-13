@@ -145,6 +145,16 @@ export default function Tasks() {
     }
   }
 
+  async function handleAssigneeChange(task: Task, value: string) {
+    const newAssigneeId = value ? Number(value) : null;
+    try {
+      const updated = await tasksApi.assignTask(task.id, newAssigneeId);
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+    } catch {
+      setError("Не удалось изменить исполнителя");
+    }
+  }
+
   async function handleDelete(task: Task) {
     if (!confirm(`Удалить задачу "${task.title}"?`)) return;
     try {
@@ -273,23 +283,25 @@ export default function Tasks() {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                   />
-                  <select
-                    value={editPriority}
-                    onChange={(e) => setEditPriority(Number(e.target.value) as TaskPriority)}
-                  >
-                    {([1, 2, 3] as TaskPriority[]).map((p) => (
-                      <option key={p} value={p}>
-                        {PRIORITY_LABELS[p]}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="task-actions">
-                    <button type="submit" disabled={saving}>
-                      {saving ? "Сохранение..." : "Сохранить"}
-                    </button>
-                    <button type="button" className="btn-ghost" onClick={cancelEdit}>
-                      Отмена
-                    </button>
+                  <div className="task-edit-row">
+                    <select
+                      value={editPriority}
+                      onChange={(e) => setEditPriority(Number(e.target.value) as TaskPriority)}
+                    >
+                      {([1, 2, 3] as TaskPriority[]).map((p) => (
+                        <option key={p} value={p}>
+                          {PRIORITY_LABELS[p]}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="task-actions">
+                      <button type="submit" className="btn-primary" disabled={saving}>
+                        {saving ? "Сохранение..." : "Сохранить"}
+                      </button>
+                      <button type="button" className="btn-ghost" onClick={cancelEdit}>
+                        Отмена
+                      </button>
+                    </div>
                   </div>
                 </form>
               ) : (
@@ -301,23 +313,46 @@ export default function Tasks() {
                     <span className="task-people">
                       Создатель: {task.creator?.username ?? "—"}
                       {task.assignee && <> · Исполнитель: {task.assignee.username}</>}
+                      {task.assignee && task.assigned_by && (
+                        <> · Назначил: {task.assigned_by.username}</>
+                      )}
                     </span>
                   </div>
-                  <div className="task-actions">
-                    <select
-                      value={task.status}
-                      onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {STATUS_LABELS[s]}
-                        </option>
-                      ))}
-                    </select>
-                    <button onClick={() => startEdit(task)}>Изменить</button>
-                    <button className="btn-danger" onClick={() => handleDelete(task)}>
-                      Удалить
-                    </button>
+                  <div className="task-actions task-actions-stacked">
+                    <div className="task-actions-row">
+                      <select
+                        value={task.status}
+                        onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {STATUS_LABELS[s]}
+                          </option>
+                        ))}
+                      </select>
+                      {task.creator_id === user?.id && (
+                        <select
+                          title="Назначить исполнителя"
+                          value={task.assignee_id ?? ""}
+                          onChange={(e) => handleAssigneeChange(task, e.target.value)}
+                        >
+                          <option value="">Без исполнителя</option>
+                          {users.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.username}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    <div className="task-actions-row">
+                      <button className="btn-ghost" onClick={() => startEdit(task)}>
+                        Изменить
+                      </button>
+                      <button className="btn-danger" onClick={() => handleDelete(task)}>
+                        Удалить
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
