@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.providers import AppProvider, DatabaseProvider
-from app.routers import auth, tasks
+from app.routers import auth, tasks, users
 
 from app.core.logging import setup_logging
 from app.middleware.logging_middleware import LoggingMiddleware
@@ -48,6 +48,7 @@ setup_dishka(container, app=app)
 
 app.include_router(tasks.router)
 app.include_router(auth.router)
+app.include_router(users.router)
 
 
 @app.get("/", tags=["Health"])

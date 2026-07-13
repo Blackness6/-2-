@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Tasks from "./Tasks";
 import * as tasksApi from "../api/tasks";
+import * as usersApi from "../api/users";
 import type { Task, TaskStats } from "../api/types";
 
 const logout = vi.fn();
@@ -12,8 +13,10 @@ vi.mock("../auth/AuthContext", () => ({
 }));
 
 vi.mock("../api/tasks");
+vi.mock("../api/users");
 
 const mockedTasks = vi.mocked(tasksApi);
+const mockedUsers = vi.mocked(usersApi);
 
 const emptyStats: TaskStats = { TODO: 0, IN_PROGRESS: 0, DONE: 0, CANCELLED: 0 };
 
@@ -24,6 +27,12 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     description: null,
     status: "TODO",
     priority: 2,
+    creator_id: 1,
+    assigned_by_id: null,
+    assignee_id: null,
+    creator: { id: 1, username: "alice", role: "user" },
+    assigned_by: null,
+    assignee: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -33,6 +42,10 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 beforeEach(() => {
   vi.clearAllMocks();
   mockedTasks.getStats.mockResolvedValue(emptyStats);
+  mockedUsers.getUsers.mockResolvedValue([
+    { id: 1, username: "alice", role: "user" },
+    { id: 2, username: "bob", role: "user" },
+  ]);
 });
 
 describe("Tasks page", () => {
@@ -42,7 +55,7 @@ describe("Tasks page", () => {
     render(<Tasks />);
 
     expect(await screen.findByText("Задач не найдено")).toBeInTheDocument();
-    expect(screen.getByText("alice")).toBeInTheDocument();
+    expect(within(screen.getByRole("banner")).getByText("alice")).toBeInTheDocument();
   });
 
   it("renders the loaded tasks", async () => {
@@ -74,6 +87,7 @@ describe("Tasks page", () => {
         title: "Новая задача",
         description: null,
         priority: 2,
+        assignee_id: null,
       }),
     );
     expect(await screen.findByText("Новая задача")).toBeInTheDocument();

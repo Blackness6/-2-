@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import * as tasksApi from "../api/tasks";
-import type { Task, TaskPriority, TaskStats, TaskStatus } from "../api/types";
+import * as usersApi from "../api/users";
+import type { Task, TaskPriority, TaskStats, TaskStatus, UserShort } from "../api/types";
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "К выполнению",
@@ -32,6 +33,8 @@ export default function Tasks() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>(2);
+  const [assigneeId, setAssigneeId] = useState<number | "">("");
+  const [users, setUsers] = useState<UserShort[]>([]);
   const [creating, setCreating] = useState(false);
 
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -70,6 +73,13 @@ export default function Tasks() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, priorityFilter]);
 
+  useEffect(() => {
+    usersApi
+      .getUsers()
+      .then(setUsers)
+      .catch(() => setUsers([]));
+  }, []);
+
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
@@ -79,10 +89,12 @@ export default function Tasks() {
         title: title.trim(),
         description: description.trim() || null,
         priority,
+        assignee_id: assigneeId || null,
       });
       setTitle("");
       setDescription("");
       setPriority(2);
+      setAssigneeId("");
       await load();
     } catch {
       setError("Не удалось создать задачу");
@@ -195,6 +207,17 @@ export default function Tasks() {
             </option>
           ))}
         </select>
+        <select
+          value={assigneeId}
+          onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : "")}
+        >
+          <option value="">Без исполнителя</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.username}
+            </option>
+          ))}
+        </select>
         <button type="submit" disabled={creating}>
           {creating ? "Добавление..." : "Добавить"}
         </button>
@@ -275,6 +298,10 @@ export default function Tasks() {
                     <h3>{task.title}</h3>
                     {task.description && <p>{task.description}</p>}
                     <span className="task-priority">{PRIORITY_LABELS[task.priority]}</span>
+                    <span className="task-people">
+                      Создатель: {task.creator?.username ?? "—"}
+                      {task.assignee && <> · Исполнитель: {task.assignee.username}</>}
+                    </span>
                   </div>
                   <div className="task-actions">
                     <select
