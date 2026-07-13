@@ -19,3 +19,6 @@ class UserRepository(IUserRepository):
     
     def get_by_id(self, user_id: int) -> User | None:
         return self.db.get(User, user_id)
+
+    def get_all(self) -> list[User]:
+        return self.db.query(User).order_by(User.username).all()

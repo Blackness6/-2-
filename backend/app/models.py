@@ -1,8 +1,15 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
-from sqlalchemy import BigInteger, ForeignKey, Integer, String, Text, DateTime
-from sqlalchemy.orm import mapped_column, Mapped, relationship
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -45,16 +52,27 @@ class User(Base):
         nullable=False,
     )
 
-    tasks: Mapped[List["Task"]] = relationship(
-        back_populates="user",
+    created_tasks: Mapped[List["Task"]] = relationship(
+        back_populates="creator",
+        foreign_keys="Task.creator_id",
         cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    assigned_by_me_tasks: Mapped[List["Task"]] = relationship(
+        back_populates="assigned_by",
+        foreign_keys="Task.assigned_by_id",
+    )
+
+    assigned_to_me_tasks: Mapped[List["Task"]] = relationship(
+        back_populates="assignee",
+        foreign_keys="Task.assignee_id",
     )
 
 
 class Task(Base):
     __tablename__ = "tasks"
 
-    # BigInteger для PostgreSQL; SQLite требует INTEGER (не BIGINT) для autoincrement
     id: Mapped[int] = mapped_column(
         Integer().with_variant(BigInteger(), "postgresql"),
         primary_key=True,
@@ -66,7 +84,7 @@ class Task(Base):
         nullable=False,
     )
 
-    description: Mapped[str | None] = mapped_column(
+    description: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True,
     )
@@ -96,12 +114,50 @@ class Task(Base):
         nullable=False,
     )
 
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
+    # Кто создал задачу
+    creator_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
         index=True,
     )
 
-    user: Mapped["User"] = relationship(
-        back_populates="tasks",
+    # Кто назначил текущего исполнителя
+    assigned_by_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    # Кто выполняет задачу
+    assignee_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    # Объект пользователя-создателя
+    creator: Mapped["User"] = relationship(
+        back_populates="created_tasks",
+        foreign_keys=[creator_id],
+    )
+
+    # Объект пользователя, который назначил
+    assigned_by: Mapped[Optional["User"]] = relationship(
+        back_populates="assigned_by_me_tasks",
+        foreign_keys=[assigned_by_id],
+    )
+
+    # Объект пользователя-исполнителя
+    assignee: Mapped[Optional["User"]] = relationship(
+        back_populates="assigned_to_me_tasks",
+        foreign_keys=[assignee_id],
     )

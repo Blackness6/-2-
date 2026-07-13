@@ -20,6 +20,12 @@ const sampleTask: Task = {
   description: null,
   status: "TODO",
   priority: 2,
+  creator_id: 1,
+  assigned_by_id: null,
+  assignee_id: null,
+  creator: { id: 1, username: "alice", role: "user" },
+  assigned_by: null,
+  assignee: null,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
