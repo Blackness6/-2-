@@ -103,10 +103,11 @@ class TaskUpdate(BaseModel):
     priority: TaskPriorityEnum | None = None
 
 
-# Отдельная схема для назначения или переназначения исполнителя
+# Отдельная схема для назначения, переназначения или снятия исполнителя.
+# assignee_id = null означает "убрать исполнителя".
 class TaskAssign(BaseModel):
-    assignee_id: int = Field(
-        ...,
+    assignee_id: int | None = Field(
+        default=None,
         gt=0,
     )
 

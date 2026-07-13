@@ -101,10 +101,15 @@ class TaskService:
                 detail="Only the task creator can assign it",
             )
 
-        self._ensure_user_exists(data.assignee_id)
+        if data.assignee_id is None:
+            # Снимаем исполнителя: вместе с ним обнуляем и того, кто назначал.
+            task.assignee_id = None
+            task.assigned_by_id = None
+        else:
+            self._ensure_user_exists(data.assignee_id)
+            task.assignee_id = data.assignee_id
+            task.assigned_by_id = user_id
 
-        task.assignee_id = data.assignee_id
-        task.assigned_by_id = user_id
         task.updated_at = _utcnow()
         try:
             task = self.repo.update(task)

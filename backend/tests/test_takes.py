@@ -174,6 +174,32 @@ def test_assign_endpoint(client):
     assert data["assigned_by_id"] == 1
 
 
+def test_reassign_task(client):
+    """Создатель может поменять исполнителя."""
+    task_id = create_task(client, "Reassign", assignee_id=2).json()["id"]
+    resp = client.patch(f"/api/tasks/{task_id}/assign", json={"assignee_id": 1})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["assignee_id"] == 1
+    assert data["assigned_by_id"] == 1
+
+
+def test_unassign_task(client):
+    """Создатель может убрать исполнителя: assignee и assigned_by обнуляются."""
+    task_id = create_task(client, "Unassign", assignee_id=2).json()["id"]
+    resp = client.patch(f"/api/tasks/{task_id}/assign", json={"assignee_id": None})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["assignee_id"] is None
+    assert data["assigned_by_id"] is None
+    assert data["assignee"] is None
+    assert data["assigned_by"] is None
+
+    # Бывший исполнитель больше не видит задачу
+    login_as(2)
+    assert client.get(f"/api/tasks/{task_id}").status_code == 404
+
+
 def test_only_creator_can_assign(client):
     """Исполнитель не может переназначить чужую задачу — 403."""
     task_id = create_task(client, "Protected", assignee_id=2).json()["id"]
