@@ -1,22 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Tasks from "./Tasks";
-import * as tasksApi from "../api/tasks";
-import * as usersApi from "../api/users";
-import type { Task, TaskStats } from "../api/types";
+import TasksPage from "./TasksPage";
+import * as taskApi from "../../api/taskApi";
+import * as userApi from "../../api/userApi";
+import type { Task, TaskStats } from "../../types/task";
 
 const logout = vi.fn();
 
-vi.mock("../auth/AuthContext", () => ({
+vi.mock("../../hooks/useAuth", () => ({
   useAuth: () => ({ user: { username: "alice" }, logout }),
 }));
 
-vi.mock("../api/tasks");
-vi.mock("../api/users");
+vi.mock("../../api/taskApi");
+vi.mock("../../api/userApi");
 
-const mockedTasks = vi.mocked(tasksApi);
-const mockedUsers = vi.mocked(usersApi);
+const mockedTasks = vi.mocked(taskApi);
+const mockedUsers = vi.mocked(userApi);
 
 const emptyStats: TaskStats = { TODO: 0, IN_PROGRESS: 0, DONE: 0, CANCELLED: 0 };
 
@@ -52,7 +52,7 @@ describe("Tasks page", () => {
   it("shows the empty state when there are no tasks", async () => {
     mockedTasks.getTasks.mockResolvedValue([]);
 
-    render(<Tasks />);
+    render(<TasksPage />);
 
     expect(await screen.findByText("Задач не найдено")).toBeInTheDocument();
     expect(within(screen.getByRole("banner")).getByText("alice")).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe("Tasks page", () => {
       makeTask({ id: 2, title: "Позвонить маме", priority: 3 }),
     ]);
 
-    render(<Tasks />);
+    render(<TasksPage />);
 
     expect(await screen.findByText("Купить молоко")).toBeInTheDocument();
     expect(screen.getByText("Позвонить маме")).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe("Tasks page", () => {
     ]);
     mockedTasks.createTask.mockResolvedValue(makeTask({ id: 5, title: "Новая задача" }));
 
-    render(<Tasks />);
+    render(<TasksPage />);
     await screen.findByText("Задач не найдено");
 
     await userEvent.type(screen.getByPlaceholderText("Название задачи"), "Новая задача");
@@ -97,7 +97,7 @@ describe("Tasks page", () => {
     mockedTasks.getTasks.mockResolvedValue([makeTask({ id: 1, title: "Купить молоко" })]);
     mockedTasks.updateTask.mockResolvedValue(makeTask({ id: 1, status: "DONE" }));
 
-    render(<Tasks />);
+    render(<TasksPage />);
     const card = (await screen.findByText("Купить молоко")).closest("li")!;
 
     const statusSelect = within(card).getByRole("combobox");
@@ -113,7 +113,7 @@ describe("Tasks page", () => {
     mockedTasks.deleteTask.mockResolvedValue(undefined);
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
-    render(<Tasks />);
+    render(<TasksPage />);
     const card = (await screen.findByText("Купить молоко")).closest("li")!;
 
     await userEvent.click(within(card).getByRole("button", { name: "Удалить" }));
@@ -125,7 +125,7 @@ describe("Tasks page", () => {
     mockedTasks.getTasks.mockResolvedValue([makeTask({ id: 1, title: "Купить молоко" })]);
     vi.spyOn(window, "confirm").mockReturnValue(false);
 
-    render(<Tasks />);
+    render(<TasksPage />);
     const card = (await screen.findByText("Купить молоко")).closest("li")!;
 
     await userEvent.click(within(card).getByRole("button", { name: "Удалить" }));
@@ -136,7 +136,7 @@ describe("Tasks page", () => {
   it("shows an error when loading fails", async () => {
     mockedTasks.getTasks.mockRejectedValue(new Error("boom"));
 
-    render(<Tasks />);
+    render(<TasksPage />);
 
     expect(await screen.findByText("Не удалось загрузить задачи")).toBeInTheDocument();
   });
@@ -144,7 +144,7 @@ describe("Tasks page", () => {
   it("logs out when the logout button is clicked", async () => {
     mockedTasks.getTasks.mockResolvedValue([]);
 
-    render(<Tasks />);
+    render(<TasksPage />);
     await screen.findByText("Задач не найдено");
 
     await userEvent.click(screen.getByRole("button", { name: "Выйти" }));

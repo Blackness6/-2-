@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import Login from "./Login";
+import LoginPage from "./LoginPage";
 
 const navigate = vi.fn();
 const login = vi.fn();
@@ -12,14 +12,14 @@ vi.mock("react-router-dom", async (importOriginal) => {
   return { ...actual, useNavigate: () => navigate };
 });
 
-vi.mock("../auth/AuthContext", () => ({
+vi.mock("../../hooks/useAuth", () => ({
   useAuth: () => ({ login }),
 }));
 
 function renderLogin() {
   return render(
     <MemoryRouter>
-      <Login />
+      <LoginPage />
     </MemoryRouter>,
   );
 }

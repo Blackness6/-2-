@@ -1,12 +1,8 @@
+import type { UserShort } from "./user";
+
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "CANCELLED";
 
 export type TaskPriority = 1 | 2 | 3;
-
-export interface UserShort {
-  id: number;
-  username: string;
-  role: string;
-}
 
 export interface Task {
   id: number;
@@ -38,16 +34,14 @@ export interface TaskUpdate {
   priority?: TaskPriority;
 }
 
+export interface TaskFilters {
+  status?: TaskStatus;
+  priority?: TaskPriority;
+}
+
 export interface TaskStats {
   TODO: number;
   IN_PROGRESS: number;
   DONE: number;
   CANCELLED: number;
-}
-
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: string;
 }

@@ -1,7 +1,7 @@
-import { api } from "./api";
-import type { Task, TaskCreate, TaskUpdate, TaskStats, TaskStatus } from "./types";
+import { api } from "./client";
+import type { Task, TaskCreate, TaskFilters, TaskStats, TaskUpdate } from "../types/task";
 
-export async function getTasks(filters: { status?: TaskStatus; priority?: number }) {
+export async function getTasks(filters: TaskFilters) {
   const { data } = await api.get<Task[]>("/api/tasks", { params: filters });
   return data;
 }

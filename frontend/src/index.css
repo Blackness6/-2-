@@ -75,3 +75,19 @@ textarea {
 button {
   cursor: pointer;
 }
+
+/* Общие элементы (Loader, ErrorMessage) */
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100svh;
+}
+
+.form-error {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(229, 72, 77, 0.1);
+  color: var(--danger);
+  font-size: 14px;
+}

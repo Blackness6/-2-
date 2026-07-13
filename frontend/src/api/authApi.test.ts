@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as authApi from "./auth";
-import { api } from "./api";
-import type { User } from "./types";
+import * as authApi from "./authApi";
+import { api } from "./client";
+import type { User } from "../types/user";
 
-vi.mock("./api", () => ({
+vi.mock("./client", () => ({
   api: {
     get: vi.fn(),
     post: vi.fn(),
