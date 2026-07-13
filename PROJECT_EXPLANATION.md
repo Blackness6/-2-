@@ -1,569 +1,363 @@
-# Task Manager API — Полное объяснение проекта
+# Task Manager — Полное объяснение проекта
 
 ## Что это такое
 
-REST API для управления задачами — как упрощённый Trello. Написан на Python с FastAPI, хранит данные в PostgreSQL. Запускается в Docker.
+Fullstack-приложение для управления задачами — как упрощённый Trello с командной работой.
+Проект состоит из четырёх частей:
+
+- **Backend** — REST API на Python (FastAPI) + PostgreSQL
+- **Frontend** — SPA на React + TypeScript (Vite)
+- **Мониторинг** — Prometheus + Grafana
+- **CI** — GitHub Actions (тесты и сборка при каждом push/PR)
+
+Есть регистрация и вход (JWT), задачи привязаны к пользователям: у задачи есть **создатель**, **исполнитель** и тот, кто исполнителя **назначил**.
 
 ## Как устроена архитектура
 
 ```
-Клиент (браузер/Postman)
-        ↓  HTTP-запрос
-   [routers/tasks.py]          ← принимает запросы
-        ↓
-  [services/task_service.py]   ← бизнес-логика
-        ↓
-  [repositories/task_repository.py]  ← работа с БД
-        ↓
-   [PostgreSQL / SQLite]
+Браузер (React SPA, порт 3000)
+        │  HTTP + JWT-токен в заголовке Authorization
+        ▼
+[routers/]                 ← принимает запросы, проверяет токен
+        ▼
+[services/]                ← бизнес-логика, права доступа, транзакции
+        ▼
+[repositories/]            ← SQL-запросы через SQLAlchemy
+        ▼
+   PostgreSQL
+
+Сборка зависимостей: dishka (DI-контейнер)
+Сквозные слои: middleware (логирование, метрики) → Prometheus → Grafana
 ```
 
-Три слоя разделены специально — можно поменять БД или фреймворк независимо друг от друга.
+Слои разделены специально: можно поменять БД или фреймворк независимо друг от друга.
+Сервисы зависят не от конкретных репозиториев, а от **интерфейсов** (`ITaskRepository`, `IUserRepository`) — это упрощает тестирование и подмену реализации.
 
 ## Структура файлов
 
 ```
 task-api/
-├── .env                    ← секреты (не в git)
-├── requirements.txt        ← зависимости Python
-├── Dockerfile              ← сборка Docker-образа
-├── docker-compose.yml      ← запуск api + db вместе
-├── entrypoint.sh           ← старт: миграции → сервер
-├── alembic.ini             ← настройки Alembic
+├── docker-compose.yml           ← запуск всего: db + api + frontend + prometheus + grafana
+├── .github/workflows/ci.yml     ← CI: тесты backend и frontend
 │
-├── app/
-│   ├── main.py             ← точка входа FastAPI
-│   ├── database.py         ← подключение к БД, сессии
-│   ├── models.py           ← таблица tasks в виде Python-класса
-│   ├── schemas.py          ← формат запросов и ответов
-│   ├── core/
-│   │   └── config.py       ← читает .env, собирает DATABASE_URL
-│   ├── routers/
-│   │   └── tasks.py        ← HTTP-маршруты (GET/POST/PATCH/DELETE)
-│   ├── services/
-│   │   └── task_service.py ← бизнес-логика
-│   └── repositories/
-│       └── task_repository.py ← SQL-запросы
+├── backend/
+│   ├── Dockerfile               ← образ Python 3.13
+│   ├── entrypoint.sh            ← старт: миграции → сервер
+│   ├── requirements.txt         ← прод-зависимости
+│   ├── requirements-dev.txt     ← pytest, httpx (в прод-образ не попадают)
+│   ├── alembic.ini              ← настройки Alembic
+│   ├── .env / .env.example      ← секреты (не в git) / шаблон
+│   │
+│   ├── app/
+│   │   ├── main.py              ← точка входа FastAPI, middleware, /metrics
+│   │   ├── database.py          ← engine, SessionLocal, Base
+│   │   ├── models.py            ← таблицы users и tasks
+│   │   ├── schemas.py           ← Pydantic-схемы запросов/ответов
+│   │   ├── providers.py         ← DI-контейнер dishka
+│   │   ├── core/
+│   │   │   ├── config.py        ← настройки из .env
+│   │   │   ├── security.py      ← bcrypt, JWT, get_current_user_id
+│   │   │   └── logging.py       ← настройка логов
+│   │   ├── middleware/
+│   │   │   ├── logging_middleware.py  ← лог каждого запроса
+│   │   │   └── metrics_middleware.py  ← метрики Prometheus
+│   │   ├── observability/
+│   │   │   └── metrics.py       ← определения метрик (Counter, Histogram, Gauge)
+│   │   ├── interfaces/
+│   │   │   ├── task_repository.py     ← ITaskRepository (абстрактный класс)
+│   │   │   └── user_repository.py     ← IUserRepository
+│   │   ├── routers/
+│   │   │   ├── auth.py          ← /auth/register, /auth/login, /auth/me
+│   │   │   ├── tasks.py         ← CRUD задач + /assign + /stats
+│   │   │   └── users.py         ← список пользователей (для выбора исполнителя)
+│   │   ├── services/
+│   │   │   ├── auth_service.py  ← регистрация, вход, выдача токена
+│   │   │   └── task_service.py  ← бизнес-логика задач
+│   │   └── repositories/
+│   │       ├── task_repository.py
+│   │       └── user_repository.py
+│   │
+│   ├── migrations/versions/     ← 4 миграции Alembic:
+│   │   ├── d97b81ffd2be_initial.py                ← таблица tasks
+│   │   ├── 4d13fc3f415d_add_users_table.py        ← таблица users
+│   │   ├── a1b2c3d4e5f6_add_user_id_to_tasks.py   ← связь задач с пользователями
+│   │   └── b7e2f8a9c1d3_task_assignment_fields.py ← поля назначения
+│   │
+│   └── tests/
+│       ├── conftest.py          ← тестовая БД (SQLite in-memory)
+│       └── test_takes.py        ← 20 тестов
 │
-├── migrations/
-│   ├── env.py              ← конфиг Alembic (как запускать миграции)
-│   └── versions/
-│       └── d97b81ffd2be_initial.py ← первая миграция (создание таблицы)
+├── frontend/
+│   ├── Dockerfile               ← сборка Vite → раздача через nginx
+│   ├── package.json             ← react 19, axios, react-router, vitest
+│   └── src/
+│       ├── main.tsx / App.tsx   ← точка входа, роутинг
+│       ├── api/                 ← axios-клиент, запросы к API, типы
+│       ├── auth/AuthContext.tsx ← хранение токена, состояние «вошёл/не вошёл»
+│       └── pages/               ← Login, Register, Tasks (+ тесты рядом)
 │
-└── tests/
-    ├── conftest.py         ← настройка тестовой БД (SQLite in-memory)
-    └── test_takes.py       ← 13 тестов
+└── monitoring/
+    ├── prometheus/prometheus.yml ← кого опрашивать (scrape-таргеты)
+    └── grafana/                  ← дашборд + авто-подключение источника данных
 ```
 
 ---
 
-## requirements.txt — зависимости проекта
+## Backend
 
-```
-fastapi           — веб-фреймворк для создания API
-uvicorn[standard] — сервер, который запускает FastAPI
-sqlalchemy        — ORM (работа с БД через Python-объекты, без SQL)
-alembic           — миграции БД (создание/изменение таблиц)
-psycopg2-binary   — драйвер для подключения к PostgreSQL
-pydantic          — валидация данных (проверяет что title не пустой и т.д.)
-pydantic-settings — загрузка настроек из файла .env
-python-dotenv     — читает файл .env
-```
-
----
-
-## .env — переменные окружения (секреты)
-
-```
-DB_HOST=localhost      # адрес сервера базы данных
-DB_PORT=5432           # порт PostgreSQL (стандартный)
-DB_NAME=task_manager   # название базы данных
-DB_USER=beibarys       # пользователь БД
-DB_PASSWORD=postgres   # пароль БД
-```
-
-Этот файл не заливается в git (там секреты). Приложение читает его при запуске.
-
----
-
-## app/core/config.py — настройки приложения
+### app/core/config.py — настройки
 
 ```python
-from pydantic_settings import BaseSettings
-# Импортируем базовый класс для настроек.
-
 class Settings(BaseSettings):
-    DB_HOST: str = "localhost"   # значения по умолчанию — если .env не найден
-    DB_PORT: int = 5432
-    DB_NAME: str = "task_manager"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "postgres"
-    # Класс автоматически читает переменные из .env файла и подставляет их сюда.
+    DB_HOST: str        # без значений по умолчанию — приложение
+    DB_PORT: int        # не стартует, если переменная не задана
+    DB_NAME: str
+    DB_USER: str
+    DB_PASSWORD: str
+
+    SECRET_KEY: str     # ключ подписи JWT-токенов
+
+    ALGORITHM: str = "HS256"              # алгоритм подписи JWT
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # токен живёт 30 минут
 
     @property
     def DATABASE_URL(self) -> str:
-        return (
-            f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}"
-            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        )
-    # Собирает строку подключения к БД из отдельных переменных.
-    # Пример: postgresql+psycopg2://beibarys:postgres@localhost:5432/task_manager
-
-    @property
-    def TEST_DATABASE_URL(self) -> str:
-        return "sqlite:///./test.db"
-    # URL для тестовой базы — SQLite (файл на диске, не нужен сервер PostgreSQL).
-
-    model_config = {"env_file": ".env", "extra": "ignore"}
-    # Говорим pydantic: читать из файла .env, лишние переменные игнорировать.
-
-settings = Settings()
-# Создаём один глобальный объект настроек. Все файлы импортируют именно его.
+        return f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 ```
 
----
+Переменные читаются из `.env` (локально) или из environment в docker-compose / Render.
 
-## app/database.py — подключение к базе данных
+### app/models.py — две таблицы
 
-```python
-class Base(DeclarativeBase):
-    pass
-# Базовый класс для всех моделей (таблиц).
-# Все модели наследуются от него — SQLAlchemy так знает о всех таблицах.
+**User** — пользователь:
 
-def get_engine(url: str | None = None):
-    db_url = url or settings.DATABASE_URL
-    connect_args = {"check_same_thread": False} if "sqlite" in db_url else {}
-    return create_engine(db_url, connect_args=connect_args)
-# Создаёт "движок" — объект соединения с БД.
-# check_same_thread: False нужен только для SQLite (PostgreSQL не требует).
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | int (BigInteger в PG) | первичный ключ |
+| username | str(100), unique | имя пользователя |
+| email | str(255), unique | почта (логин) |
+| hashed_password | str(255) | bcrypt-хэш, пароль в открытом виде не хранится |
+| role | str(20), default "user" | роль (задел на будущее) |
+| created_at | datetime | когда зарегистрировался |
 
-engine = get_engine()
-# Создаём движок один раз при запуске приложения.
+**Task** — задача:
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-# Фабрика сессий. Сессия — это как "транзакция": набор операций с БД,
-# которые либо все выполняются, либо ни одна.
-# autocommit=False — мы сами решаем когда сохранять.
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id, title, description, status, priority | — | как раньше (status: TODO/IN_PROGRESS/DONE/CANCELLED, priority: 1–3) |
+| creator_id | FK → users.id, CASCADE | кто создал; при удалении пользователя его задачи удаляются |
+| assignee_id | FK → users.id, SET NULL | кто выполняет; при удалении пользователя поле обнуляется |
+| assigned_by_id | FK → users.id, SET NULL | кто назначил текущего исполнителя |
+| created_at, updated_at | datetime | временные метки |
 
-def get_db():
-    db = SessionLocal()   # открываем сессию
-    try:
-        yield db          # передаём её в роутер (здесь выполняется логика запроса)
-    finally:
-        db.close()        # гарантированно закрываем после запроса
-# Генератор-зависимость для FastAPI.
-# Каждый HTTP-запрос получает свою сессию БД, которая закрывается после ответа.
-```
+Плюс `relationship` в обе стороны (`creator`, `assignee`, `assigned_by`) — чтобы API отдавал не только id, но и имя пользователя.
 
----
+### app/schemas.py — формат данных
 
-## app/models.py — структура таблицы в БД
+Новое по сравнению со старой версией:
 
 ```python
-class Task(Base):
-    __tablename__ = "tasks"   # название таблицы в БД
+class TaskStatus(str, Enum): ...        # статусы теперь Enum, а не Literal
+class TaskPriorityEnum(int, Enum): ...  # LOW=1, MEDIUM=2, HIGH=3
 
-    id: Mapped[int] = mapped_column(
-        Integer().with_variant(BigInteger(), "postgresql"),
-        primary_key=True,
-        autoincrement=True,
-    )
-    # Колонка id. with_variant — хитрость:
-    # для PostgreSQL используем BigInteger (большие числа),
-    # для SQLite — обычный Integer (SQLite не умеет BIGINT с autoincrement).
-
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    # Заголовок задачи. Строка до 255 символов, обязательное поле.
-
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Описание. Text — длинный текст без ограничения. Может быть пустым.
-
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="TODO")
-    # Статус задачи. Максимум 30 символов.
-
-    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
-    # Приоритет (1, 2, или 3). По умолчанию 2 — средний.
-
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    # Временные метки создания и обновления.
-```
-
----
-
-## app/schemas.py — формат данных от клиента
-
-Схемы — это "контракт": что клиент должен прислать и что получит в ответ.
-
-```python
-TaskStatus = Literal["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]
-TaskPriority = Literal[1, 2, 3]
-# Типы-ограничения. Если клиент пришлёт status: "FLYING" — Pydantic вернёт ошибку 422.
+class UserCreate(BaseModel):            # регистрация
+    username: str   # 3–100 символов
+    email: EmailStr # pydantic сам проверяет формат почты
+    password: str   # минимум 8 символов
 
 class TaskCreate(BaseModel):
-    title: str = Field(..., min_length=1, max_length=255)  # обязательное, 1-255 символов
-    description: str | None = None                          # необязательное
-    priority: TaskPriority = 2                              # необязательное, по умолчанию 2
-# Данные при создании задачи. ... означает "обязательное поле".
+    ...
+    assignee_id: int | None = None      # можно сразу назначить исполнителя
 
-class TaskUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = None
-    status: TaskStatus | None = None
-    priority: TaskPriority | None = None
-# Данные при обновлении. Все поля необязательные — можно менять только один атрибут.
+class TaskAssign(BaseModel):            # отдельная схема для /assign
+    assignee_id: int
 
 class TaskResponse(BaseModel):
-    id: int
-    title: str
-    description: str | None
-    status: str
-    priority: int
-    created_at: datetime
-    updated_at: datetime
-    model_config = {"from_attributes": True}
-# Что API возвращает клиенту.
-# from_attributes=True позволяет создать схему из объекта SQLAlchemy (не из словаря).
+    ...
+    creator: UserShortResponse          # вложенные объекты пользователей —
+    assigned_by: UserShortResponse | None  # frontend показывает имена,
+    assignee: UserShortResponse | None     # а не голые id
 
-class TaskStats(BaseModel):
-    TODO: int = 0
-    IN_PROGRESS: int = 0
-    DONE: int = 0
-    CANCELLED: int = 0
-# Структура ответа для статистики.
+class Token(BaseModel):                 # ответ /auth/login
+    access_token: str
+    token_type: str                     # "bearer"
 ```
 
----
-
-## app/repositories/task_repository.py — работа с БД
+### app/core/security.py — пароли и JWT
 
 ```python
-class TaskRepository:
-    def __init__(self, db: Session):
-        self.db = db          # сохраняем сессию БД
+hash_password(password)        # bcrypt-хэш при регистрации
+verify_password(plain, hashed) # проверка при входе
 
-    def create(self, task: Task) -> Task:
-        self.db.add(task)     # добавляем объект в сессию (ещё не в БД)
-        self.db.commit()      # выполняем INSERT в БД
-        self.db.refresh(task) # обновляем объект из БД (получаем id)
-        return task
+create_access_token({"sub": str(user.id)})
+# JWT с id пользователя внутри и сроком жизни 30 минут,
+# подписан SECRET_KEY — подделать без ключа нельзя.
 
-    def get_by_id(self, task_id: int) -> Task | None:
-        return self.db.get(Task, task_id)
-        # SELECT * FROM tasks WHERE id = task_id
-
-    def get_all(self, status=None, priority=None) -> list[Task]:
-        stmt = select(Task)                           # SELECT * FROM tasks
-        if status is not None:
-            stmt = stmt.where(Task.status == status)  # добавляем WHERE status = ?
-        if priority is not None:
-            stmt = stmt.where(Task.priority == priority)
-        return list(self.db.scalars(stmt).all())      # выполняем и возвращаем список
-
-    def update(self, task: Task) -> Task:
-        self.db.commit()       # SQLAlchemy уже знает об изменениях — просто сохраняем
-        self.db.refresh(task)  # обновляем объект из БД
-        return task
-
-    def delete(self, task: Task) -> None:
-        self.db.delete(task)  # помечаем на удаление
-        self.db.commit()      # выполняем DELETE
-
-    def get_stats(self) -> dict[str, int]:
-        rows = self.db.execute(
-            select(Task.status, func.count(Task.id).label("cnt"))
-            .group_by(Task.status)
-            # SQL: SELECT status, COUNT(id) FROM tasks GROUP BY status
-        ).all()
-        return {row.status: row.cnt for row in rows}  # {"TODO": 5, "DONE": 3}
+get_current_user_id(credentials)
+# FastAPI-зависимость: достаёт токен из заголовка Authorization: Bearer <token>,
+# проверяет подпись и срок, возвращает user_id. Невалидный токен → 401.
 ```
 
----
+Каждый защищённый эндпоинт просто добавляет `user_id: int = Depends(get_current_user_id)` — и автоматически требует авторизацию.
 
-## app/services/task_service.py — бизнес-логика
+### app/providers.py — dishka (внедрение зависимостей)
+
+Раньше зависимости собирались вручную через фабрику `get_service()`. Теперь это делает DI-контейнер **dishka**:
 
 ```python
-class TaskService:
-    def __init__(self, repo: TaskRepository):
-        self.repo = repo
-    # Конструктор. Принимает репозиторий и сохраняет в self.repo.
-    # Это инъекция зависимостей — сервис не создаёт репозиторий сам, а получает снаружи.
+class DatabaseProvider(Provider):
+    @provide(scope=Scope.REQUEST)      # на каждый HTTP-запрос — своя сессия БД
+    def get_session(self) -> Iterable[Session]:
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()                 # сессия гарантированно закрывается
 
-    def create_task(self, data: TaskCreate) -> Task:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        # Текущее время в UTC. replace(tzinfo=None) убирает timezone,
-        # потому что SQLite не умеет хранить timezone-aware даты.
-        task = Task(
-            title=data.title,
-            description=data.description,
-            status="TODO",        # новая задача всегда начинается со статуса TODO
-            priority=data.priority,
-            created_at=now,
-            updated_at=now,
-        )
-        return self.repo.create(task)
-
-    def get_tasks(self, status=None, priority=None) -> list[Task]:
-        return self.repo.get_all(status=status, priority=priority)
-        # Просто передаёт фильтры в репозиторий и возвращает результат.
-
-    def get_task(self, task_id: int) -> Task:
-        task = self.repo.get_by_id(task_id)
-        if task is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Task {task_id} not found",
-            )
-        # Если задача не найдена — выбрасываем ошибку 404.
-        # FastAPI поймает её и вернёт клиенту JSON: {"detail": "Task 5 not found"}
-        return task
-
-    def update_task(self, task_id: int, data: TaskUpdate) -> Task:
-        task = self.get_task(task_id)
-        # Сначала проверяем существование (если нет — get_task сам выбросит 404).
-        update_data = data.model_dump(exclude_none=True)
-        # Преобразуем схему в словарь {"title": "...", "priority": 2}.
-        # exclude_none=True — не включаем поля, которые клиент не передал.
-        for field, value in update_data.items():
-            setattr(task, field, value)
-        # Перебираем все переданные поля и устанавливаем их на объект task.
-        task.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        return self.repo.update(task)
-
-    def delete_task(self, task_id: int) -> None:
-        task = self.get_task(task_id)   # проверяем существование (иначе 404)
-        self.repo.delete(task)
-
-    def get_stats(self) -> TaskStats:
-        raw = self.repo.get_stats()
-        # Получаем из репозитория сырой словарь {"TODO": 5, "DONE": 3, ...}
-        return TaskStats(
-            TODO=raw.get("TODO", 0),
-            IN_PROGRESS=raw.get("IN_PROGRESS", 0),
-            DONE=raw.get("DONE", 0),
-            CANCELLED=raw.get("CANCELLED", 0),
-        )
-        # .get("TODO", 0) — если ключа нет (задач с этим статусом не было), вернём 0.
+class AppProvider(Provider):
+    @provide(scope=Scope.REQUEST)
+    def get_task_repository(self, db: Session) -> ITaskRepository:
+        return TaskRepository(db)      # запросили интерфейс — получили реализацию
+    # ... то же для UserRepository, TaskService, AuthService
 ```
 
----
+В роутере пишем `service: FromDishka[TaskService]` (и `route_class=DishkaRoute` у роутера) — контейнер сам строит цепочку: сессия → репозитории → сервис.
 
-## app/routers/tasks.py — HTTP-эндпоинты
+### app/repositories/ — работа с БД
+
+Ключевые изменения:
 
 ```python
-router = APIRouter(prefix="/api/tasks", tags=["tasks"])
-# Все маршруты будут начинаться с /api/tasks.
+def _visible_to(user_id):
+    # Пользователь видит задачу, только если он её создатель ИЛИ исполнитель.
+    return or_(Task.creator_id == user_id, Task.assignee_id == user_id)
 
-def get_service(db: Session = Depends(get_db)) -> TaskService:
-    return TaskService(TaskRepository(db))
-# Фабрика: FastAPI вызывает get_db() → получает сессию →
-# создаёт репозиторий → создаёт сервис. Всё автоматически при каждом запросе.
-
-@router.post("", response_model=TaskResponse, status_code=201)
-def create_task(data: TaskCreate, service: Annotated[TaskService, Depends(get_service)]):
-    return service.create_task(data)
-# POST /api/tasks — создать задачу. Возвращает 201 Created.
-
-@router.get("/stats", response_model=TaskStats)
-def get_stats(service: Annotated[TaskService, Depends(get_service)]):
-    return service.get_stats()
-# GET /api/tasks/stats — статистика.
-# Важно: /stats объявлен РАНЬШЕ /{task_id},
-# иначе FastAPI интерпретировал бы "stats" как id.
-
-@router.get("", response_model=list[TaskResponse])
-def get_tasks(service, status=Query(default=None), priority=Query(default=None)):
-    return service.get_tasks(status=status, priority=priority)
-# GET /api/tasks?status=DONE&priority=1 — список с фильтрами.
-# Query означает параметры в URL (после знака ?).
-
-@router.get("/{task_id}", response_model=TaskResponse)
-def get_task(task_id: int, service: Annotated[TaskService, Depends(get_service)]):
-    return service.get_task(task_id)
-# GET /api/tasks/5 — одна задача по id.
-# {task_id} — переменная часть URL.
-
-@router.patch("/{task_id}", response_model=TaskResponse)
-def update_task(task_id: int, data: TaskUpdate, service: Annotated[TaskService, Depends(get_service)]):
-    return service.update_task(task_id, data)
-# PATCH /api/tasks/5 — частичное обновление (не PUT, который требует все поля).
-
-@router.delete("/{task_id}", status_code=204)
-def delete_task(task_id: int, service: Annotated[TaskService, Depends(get_service)]):
-    service.delete_task(task_id)
-# DELETE /api/tasks/5 — удалить. 204 No Content — тело ответа пустое.
+def _with_users(stmt):
+    # selectinload — жадная подгрузка creator/assigned_by/assignee одним
+    # дополнительным запросом (иначе N+1 запросов при сериализации ответа).
+    return stmt.options(selectinload(Task.creator), ...)
 ```
 
----
+Все методы чтения (`get_by_id`, `get_all`, `get_stats`) фильтруют по `_visible_to(user_id)` — чужие задачи не видны вообще.
 
-## app/main.py — точка входа
+Важно: репозиторий теперь делает **`flush()` вместо `commit()`**. Flush отправляет SQL в БД (и получает id), но не завершает транзакцию — коммитит сервис. Так несколько операций объединяются в одну атомарную транзакцию.
+
+### app/services/task_service.py — бизнес-логика и права
 
 ```python
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-# Хук жизненного цикла. Сейчас пустой — таблицы создаются через миграции.
-# До yield — код при старте сервера. После yield — код при остановке.
-
-app = FastAPI(
-    title="Task Manager API",
-    description="REST API для управления задачами — FastAPI + PostgreSQL",
-    version="1.0.0",
-    lifespan=lifespan,
-)
-# Создаём приложение. Эти данные автоматически отображаются на странице /docs.
-
-app.include_router(tasks_router)   # подключаем роутер с задачами
-
-@app.get("/", tags=["health"])
-def root():
-    return {"status": "ok", "docs": "/docs"}
-# GET / — проверка что сервер жив (health check).
+def create_task(self, data, user_id):
+    # Если при создании указан исполнитель — проверяем, что он существует,
+    # и записываем, кто назначил (текущий пользователь из JWT).
+    ...
+    try:
+        task = self.repo.create(task)   # flush
+        self.db.commit()                # транзакция завершается здесь
+    except Exception:
+        self.db.rollback()              # при ошибке — откат, БД не портится
+        raise
 ```
 
----
+Правила доступа:
 
-## Миграции Alembic
+- **видеть/редактировать** задачу может создатель и исполнитель;
+- **назначать исполнителя** (`PATCH /{id}/assign`) может только создатель → иначе 403;
+- **удалять** может только создатель → иначе 403;
+- чужая задача выглядит как несуществующая → 404 (не раскрываем, что она есть).
 
-### alembic.ini
-Конфиг Alembic. Главное: `script_location = migrations` — где искать файлы миграций.
+### app/services/auth_service.py
 
-### migrations/env.py
+- `register` — проверка «email уже занят» (400), хэширование пароля, создание пользователя;
+- `login` — поиск по email + проверка пароля; при любой ошибке один и тот же ответ 401 «Invalid email or password» (не подсказываем, что именно неверно);
+- `get_account` — данные текущего пользователя для `/auth/me`.
+
+### app/main.py — точка входа
 
 ```python
-import app.models  # noqa: F401
-# Импортируем модели чтобы Alembic видел все таблицы.
-# noqa: F401 — подавляем предупреждение "импорт не используется".
+app.add_middleware(LoggingMiddleware)   # лог: "GET /api/tasks -> 200 (12.34 ms)"
+app.add_middleware(MetricsMiddleware)   # счётчики для Prometheus
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
-# Передаём URL из настроек, чтобы не дублировать в alembic.ini.
+app.add_middleware(CORSMiddleware, allow_origins=[
+    "http://localhost:3000",              # локальный frontend
+    "https://frontend-928y.onrender.com", # frontend на Render
+])
+# CORS обязателен: frontend и API живут на разных доменах/портах,
+# без него браузер заблокирует запросы.
 
-def run_migrations_online():   # обычный режим — подключается к живой БД
-def run_migrations_offline():  # генерирует SQL-скрипт без подключения к БД
+container = make_async_container(DatabaseProvider(), AppProvider())
+setup_dishka(container, app=app)        # подключаем DI-контейнер
+
+@app.get("/metrics", include_in_schema=False)  # не показываем в /docs
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+# Отсюда Prometheus каждые 5 секунд забирает метрики.
 ```
 
-### migrations/versions/d97b81ffd2be_initial.py
+### Мониторинг
 
-```python
-def upgrade() -> None:
-    op.create_table("tasks", ...)  # создаёт таблицу tasks
+**observability/metrics.py** — четыре метрики:
 
-def downgrade() -> None:
-    op.drop_table("tasks")         # откатывает — удаляет таблицу
-```
+| Метрика | Тип | Что измеряет |
+|---------|-----|--------------|
+| task_api_http_requests_total | Counter | количество запросов (метод, путь, статус) |
+| task_api_http_request_duration_seconds | Histogram | время ответа |
+| task_api_http_requests_in_progress | Gauge | сколько запросов выполняется прямо сейчас |
+| task_api_http_errors_total | Counter | ответы со статусом ≥ 400 |
 
-Каждая миграция имеет `upgrade` (применить) и `downgrade` (откатить).
-Запускается командой: `alembic upgrade head`
+**metrics_middleware.py** оборачивает каждый запрос: инкрементирует счётчики, замеряет время через `time.perf_counter()`. В качестве пути берёт **шаблон роута** (`/api/tasks/{task_id}`), а не реальный URL — иначе каждый id создавал бы отдельную метрику. Запросы к самому `/metrics` не считаются.
+
+**Prometheus** (порт 9090) опрашивает `/metrics` каждые 5 секунд — и локальный api, и задеплоенный на Render.
+**Grafana** (порт 3001, admin/admin) — готовый дашборд из `monitoring/grafana/dashboards/`, источник данных подключается автоматически через provisioning.
 
 ---
 
-## Docker
+## Frontend
 
-### Dockerfile
+React 19 + TypeScript + Vite. Запросы через axios, роутинг через react-router-dom.
 
-```dockerfile
-FROM python:3.13-slim          # берём минимальный образ Python 3.13
-WORKDIR /app                   # все команды выполняются в /app
-COPY requirements.txt .        # копируем только список зависимостей (кэш Docker)
-RUN pip install -r requirements.txt  # устанавливаем пакеты
-COPY . .                       # копируем весь код
-RUN chmod +x entrypoint.sh     # делаем скрипт запуска исполняемым
-EXPOSE 8000                    # документируем что контейнер слушает порт 8000
-CMD ["./entrypoint.sh"]        # команда по умолчанию при запуске контейнера
-```
+- **api/** — axios-клиент (`api.ts` подставляет `VITE_API_URL` и токен в заголовок), функции запросов (`auth.ts`, `tasks.ts`, `users.ts`), типы (`types.ts`);
+- **auth/AuthContext.tsx** — React-контекст: хранит JWT-токен, знает, вошёл ли пользователь, отдаёт login/logout всему приложению;
+- **pages/** — `Login`, `Register`, `Tasks` (основной экран: список задач, фильтры, назначение исполнителя).
 
-### entrypoint.sh
+Тесты — **vitest** + Testing Library (файлы `*.test.tsx` лежат рядом с кодом). Линтер — **oxlint**.
 
-```bash
-set -e                          # при любой ошибке — остановиться
-alembic upgrade head            # применяем все миграции (создаём таблицы)
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000  # запускаем сервер
-```
-
-`exec` заменяет текущий процесс uvicorn'ом — правильная передача сигналов в Docker.
-
-### docker-compose.yml
-
-```yaml
-services:
-  db:                           # контейнер PostgreSQL
-    image: postgres:16-alpine   # лёгкая версия PostgreSQL 16
-    healthcheck:                # проверяем готовность БД перед запуском api
-      test: pg_isready ...
-      interval: 5s              # каждые 5 секунд
-      retries: 5                # 5 попыток
-    volumes:
-      - postgres_data:/...      # данные БД сохраняются между перезапусками
-
-  api:
-    build: .                    # собираем из Dockerfile в текущей папке
-    depends_on:
-      db:
-        condition: service_healthy  # ждём пока БД не скажет "готова"
-```
+Docker-образ двухэтапный: сначала `node:22` собирает статику (`npm run build`), потом `nginx:alpine` её раздаёт. `VITE_API_URL` передаётся на этапе сборки — Vite вшивает адрес API прямо в JS-бандл.
 
 ---
 
-## Тесты
+## Docker Compose — пять сервисов
 
-### tests/conftest.py
+| Сервис | Порт (снаружи) | Что это |
+|--------|----------------|---------|
+| db | 5433 → 5432 | PostgreSQL 16 (5433 — чтобы не конфликтовать с локальным Postgres) |
+| api | 8001 → 8000 | backend (ждёт готовности db через healthcheck) |
+| frontend | 3000 → 80 | nginx со статикой React |
+| prometheus | 9090 | сбор метрик |
+| grafana | 3001 → 3000 | дашборды |
 
-```python
-TEST_DATABASE_URL = "sqlite://"    # "" в конце = in-memory (только в памяти, не файл)
+Данные Postgres, Prometheus и Grafana живут в именованных volumes — переживают перезапуск контейнеров.
 
-test_engine = create_engine(
-    TEST_DATABASE_URL,
-    poolclass=StaticPool,          # один коннект на все тесты (нужно для SQLite in-memory)
-)
-
-@pytest.fixture(scope="function", autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=test_engine)  # создаём таблицы перед тестом
-    yield
-    Base.metadata.drop_all(bind=test_engine)    # удаляем после теста (чистое состояние)
-# autouse=True — фикстура запускается автоматически для каждого теста.
-
-@pytest.fixture
-def client(setup_db):
-    def override_get_db():
-        ...                              # возвращаем тестовую сессию вместо боевой
-    app.dependency_overrides[get_db] = override_get_db  # подменяем зависимость
-    with TestClient(app) as c:
-        yield c
-    app.dependency_overrides.clear()    # убираем подмену после теста
-# dependency_overrides — мощная фича FastAPI:
-# подменяет любую зависимость для тестов без изменения основного кода.
-```
-
-### tests/test_takes.py
-
-7 обязательных тестов:
-
-| # | Тест | Что проверяет |
-|---|------|---------------|
-| 1 | test_create_task | POST создаёт задачу, возвращает 201 и правильные поля |
-| 2 | test_get_tasks_list | GET возвращает список всех задач |
-| 3 | test_get_task_by_id | GET по id возвращает нужную задачу |
-| 4 | test_update_status | PATCH меняет статус |
-| 5 | test_update_priority | PATCH меняет приоритет |
-| 6 | test_delete_task | DELETE удаляет, после — 404 |
-| 7 | test_get_nonexistent_task | GET несуществующего id возвращает 404 |
-
-Дополнительные тесты:
-
-| Тест | Что проверяет |
-|------|---------------|
-| test_filter_by_status | Фильтрация ?status=DONE |
-| test_filter_by_priority | Фильтрация ?priority=1 |
-| test_invalid_status | Неверный статус → 422 |
-| test_empty_title | Пустой title → 422 |
-| test_missing_required_fields | Нет title → 422 |
-| test_stats_endpoint | /stats возвращает правильные счётчики |
+`entrypoint.sh` у api: `alembic upgrade head` (применить миграции) → `exec uvicorn ...` (запустить сервер).
 
 ---
 
-## Как запустить проект
+## CI — .github/workflows/ci.yml
+
+Запускается при push в `main` и на каждый Pull Request. Две независимые джобы:
+
+- **backend**: Python 3.13 → `pip install` → `python -m pytest` (именно `python -m`, чтобы пакет `app` попал в `sys.path`). Тесты идут на SQLite, поэтому переменные БД — заглушки, но задать их нужно: `Settings()` требует их при импорте.
+- **frontend**: Node 22 → `npm ci` → `npm run lint` → `npm test` → `npm run build` (сборка заодно проверяет типы TypeScript).
+
+---
+
+## Тесты backend
+
+`tests/conftest.py` — SQLite in-memory (`sqlite://` + `StaticPool` — один коннект на все тесты), таблицы создаются перед каждым тестом и удаляются после — каждый тест начинает с чистой БД.
+
+`tests/test_takes.py` — **20 тестов**: CRUD задач, фильтры, валидация (422), статистика, плюс новое — регистрация/вход, доступ без токена (401), изоляция чужих задач (404), запрет удаления/назначения не-создателем (403), назначение исполнителя.
+
+---
+
+## Как запустить
 
 ### Через Docker (рекомендуется)
 
@@ -571,39 +365,68 @@ def client(setup_db):
 docker-compose up --build
 ```
 
-После запуска:
-- API: http://localhost:8000
-- Документация: http://localhost:8000/docs
+| Что | Где |
+|-----|-----|
+| Frontend | http://localhost:3000 |
+| API | http://localhost:8001 |
+| Swagger-документация | http://localhost:8001/docs |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3001 (admin/admin) |
 
 ### Локально (без Docker)
 
 ```bash
-# Установить зависимости
-pip install -r requirements.txt
-
-# Применить миграции
+# Backend
+cd backend
+pip install -r requirements.txt -r requirements-dev.txt
 alembic upgrade head
-
-# Запустить сервер
 uvicorn app.main:app --reload
+
+# Frontend (в другом терминале)
+cd frontend
+npm install
+npm run dev
 ```
 
-### Запустить тесты
+### Тесты
 
 ```bash
-pytest tests/
+cd backend && python -m pytest     # backend
+cd frontend && npm test            # frontend
 ```
 
 ---
 
-## Список всех API-эндпоинтов
+## Все API-эндпоинты
 
-| Метод | URL | Описание |
-|-------|-----|----------|
-| GET | / | Health check |
-| POST | /api/tasks | Создать задачу |
-| GET | /api/tasks | Список задач (с фильтрами) |
-| GET | /api/tasks/stats | Статистика по статусам |
-| GET | /api/tasks/{id} | Получить задачу по id |
-| PATCH | /api/tasks/{id} | Обновить задачу |
-| DELETE | /api/tasks/{id} | Удалить задачу |
+| Метод | URL | Авторизация | Описание |
+|-------|-----|-------------|----------|
+| GET | / | нет | health check |
+| GET | /metrics | нет | метрики для Prometheus |
+| POST | /auth/register | нет | регистрация (201) |
+| POST | /auth/login | нет | вход → JWT-токен |
+| GET | /auth/me | JWT | текущий пользователь |
+| GET | /api/users | JWT | список пользователей (для выбора исполнителя) |
+| POST | /api/tasks | JWT | создать задачу (можно сразу с исполнителем) |
+| GET | /api/tasks | JWT | список моих задач (?status=&priority=) |
+| GET | /api/tasks/stats | JWT | статистика по статусам |
+| GET | /api/tasks/{id} | JWT | одна задача |
+| PATCH | /api/tasks/{id} | JWT | частичное обновление |
+| PATCH | /api/tasks/{id}/assign | JWT, только создатель | назначить исполнителя |
+| DELETE | /api/tasks/{id} | JWT, только создатель | удалить (204) |
+
+Все запросы с пометкой JWT требуют заголовок `Authorization: Bearer <token>`.
+
+---
+
+## Что изменилось со старой версии
+
+1. **Монорепозиторий**: код разъехался по `backend/` и `frontend/`.
+2. **Авторизация**: JWT-токены, bcrypt-хэши паролей, таблица users.
+3. **Командная работа**: у задачи есть создатель, исполнитель и назначивший; права проверяются в сервисе (403/404), видимость — в репозитории.
+4. **DI через dishka** вместо ручных `Depends`-фабрик; сервисы зависят от интерфейсов, а не реализаций.
+5. **Транзакции**: репозиторий делает `flush`, коммитит сервис (с rollback при ошибке).
+6. **Frontend**: React 19 + TypeScript + Vite, свои тесты (vitest) и линтер (oxlint).
+7. **Наблюдаемость**: логирование запросов, метрики Prometheus, дашборд Grafana.
+8. **CI**: GitHub Actions гоняет тесты и сборку обеих частей.
+9. **Деплой**: api и frontend задеплоены на Render (адреса видны в CORS и конфиге Prometheus).
