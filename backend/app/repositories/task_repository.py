@@ -41,12 +41,15 @@ class TaskRepository(ITaskRepository):
         user_id: int,
         status: str | None = None,
         priority: int | None = None,
+        project_id: int | None = None,
     ) -> list[Task]:
         stmt = _with_users(select(Task).where(_visible_to(user_id)))
         if status is not None:
             stmt = stmt.where(Task.status == status)
         if priority is not None:
             stmt = stmt.where(Task.priority == priority)
+        if project_id is not None:
+            stmt = stmt.where(Task.project_id == project_id)
         return list(self.db.scalars(stmt).all())
 
     def update(self, task: Task) -> Task:

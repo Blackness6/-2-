@@ -19,6 +19,7 @@ class ITaskRepository(ABC):
         user_id: int,
         status: str | None = None,
         priority: int | None = None,
+        project_id: int | None = None,
         ) ->  list[Task]:
         pass
 

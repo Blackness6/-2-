@@ -4,10 +4,14 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
+from app.repositories.project_repository import ProjectRepository
 from app.repositories.task_repository import TaskRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
+from app.services.project_service import ProjectService
 from app.services.task_service import TaskService
+
+from app.interfaces.project_repository import IProjectRepository
 
 from app.interfaces.task_repository import ITaskRepository
 
@@ -44,3 +48,11 @@ class AppProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_auth_service(self, db: Session, repo: IUserRepository) -> AuthService:
         return AuthService(db, repo)
+
+    @provide(scope=Scope.REQUEST)
+    def get_project_repository(self, db: Session) -> IProjectRepository:
+        return ProjectRepository(db)
+
+    @provide(scope=Scope.REQUEST)
+    def get_project_service(self, db: Session, repo: IProjectRepository) -> ProjectService:
+        return ProjectService(db, repo)
