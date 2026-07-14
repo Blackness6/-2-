@@ -69,6 +69,63 @@ class User(Base):
         foreign_keys="Task.assignee_id",
     )
 
+    projects: Mapped[List["Project"]] = relationship(
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[int] = mapped_column(
+        Integer().with_variant(BigInteger(), "postgresql"),
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    description: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    # Владелец проекта
+    owner_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    owner: Mapped["User"] = relationship(
+        back_populates="projects",
+    )
+
+    tasks: Mapped[List["Task"]] = relationship(
+        back_populates="project",
+        passive_deletes=True,
+    )
+
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -160,4 +217,19 @@ class Task(Base):
     assignee: Mapped[Optional["User"]] = relationship(
         back_populates="assigned_to_me_tasks",
         foreign_keys=[assignee_id],
+    )
+
+    # Проект, к которому относится задача (опционально)
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(
+            "projects.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    # Объект проекта
+    project: Mapped[Optional["Project"]] = relationship(
+        back_populates="tasks",
     )

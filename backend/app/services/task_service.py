@@ -29,7 +29,7 @@ class TaskService:
                 detail=f"User {user_id} not found",
             )
 
-    def create_task(self, data: TaskCreate, user_id: int) -> Task:
+    def create_task(self, data: TaskCreate, user_id: int, project_id: int | None = None) -> Task:
         now = _utcnow()
 
         # Исполнитель опционален: если выбран — проверяем, что такой пользователь есть,
@@ -51,6 +51,7 @@ class TaskService:
             creator_id=user_id,
             assignee_id=assignee_id,
             assigned_by_id=assigned_by_id,
+            project_id=project_id,
         )
         try:
             task = self.repo.create(task)
@@ -65,6 +66,7 @@ class TaskService:
         user_id: int,
         status: str | None = None,
         priority: int | None = None,
+        project_id: int | None = None,
     ) -> list[Task]:
         return self.repo.get_all(user_id=user_id, status=status, priority=priority)
 

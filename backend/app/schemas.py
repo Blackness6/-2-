@@ -124,6 +124,9 @@ class TaskResponse(BaseModel):
     assigned_by_id: int | None
     assignee_id: int | None
 
+    # Проект, к которому относится задача
+    project_id: int | None
+
     # Полная информация для отображения на frontend
     creator: UserShortResponse
     assigned_by: UserShortResponse | None
@@ -151,3 +154,42 @@ class TaskStats(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+# =========================
+# PROJECT SCHEMAS
+# =========================
+
+class ProjectCreate(BaseModel):
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+    )
+
+    description: str | None = None
+
+
+class ProjectUpdate(BaseModel):
+    name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=255,
+    )
+
+    description: str | None = None
+
+
+class ProjectResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    owner_id: int
+
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
