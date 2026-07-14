@@ -1,10 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Project
+from app.models import Project, Task
 
 from app.interfaces.project_repository import IProjectRepository
-
 
 class ProjectRepository(IProjectRepository):
     def __init__(self, db: Session):
@@ -25,11 +24,17 @@ class ProjectRepository(IProjectRepository):
 
     def get_all(self, user_id: int) -> list[Project]:
         stmt = (
-            select(Project)
+            select(Project, func.count(Task.id))
+            .outerjoin(Task, Task.project_id == Project.id)
             .where(Project.owner_id == user_id)
+            .group_by(Project.id)
             .order_by(Project.created_at.desc())
         )
-        return list(self.db.scalars(stmt).all())
+        projects = []
+        for project, count in self.db.execute(stmt).all():
+            project.task_count = count     # обычный атрибут — Pydantic его прочитает
+            projects.append(project)
+        return projects
 
     def update(self, project: Project) -> Project:
         self.db.flush()

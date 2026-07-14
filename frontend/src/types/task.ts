@@ -16,6 +16,7 @@ export interface Task {
   creator: UserShort;
   assigned_by: UserShort | null;
   assignee: UserShort | null;
+  project_id: number | null;
   created_at: string;
   updated_at: string;
 }

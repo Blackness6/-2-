@@ -26,6 +26,7 @@ const sampleTask: Task = {
   creator: { id: 1, username: "alice", role: "user" },
   assigned_by: null,
   assignee: null,
+  project_id: null,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
