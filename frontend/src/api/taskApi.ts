@@ -31,3 +31,13 @@ export async function assignTask(id: number, assigneeId: number | null) {
 export async function deleteTask(id: number) {
   await api.delete(`/api/tasks/${id}`);
 }
+
+export async function getProjectTasks(projectId: number, filters: TaskFilters = {}) {
+  const { data } = await api.get<Task[]>(`/api/projects/${projectId}/tasks`, { params: filters });
+  return data;
+}
+
+export async function createProjectTask(projectId: number, payload: TaskCreate) {
+  const { data } = await api.post<Task>(`/api/projects/${projectId}/tasks`, payload);
+  return data;
+}
