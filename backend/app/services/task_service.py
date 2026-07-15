@@ -68,7 +68,12 @@ class TaskService:
         priority: int | None = None,
         project_id: int | None = None,
     ) -> list[Task]:
-        return self.repo.get_all(user_id=user_id, status=status, priority=priority)
+        return self.repo.get_all(
+            user_id=user_id,
+            status=status,
+            priority=priority,
+            project_id=project_id,
+        )
 
     def get_task(self, task_id: int, user_id: int) -> Task:
         task = self.repo.get_by_id(task_id, user_id)
@@ -146,3 +151,6 @@ class TaskService:
             DONE=raw.get("DONE", 0),
             CANCELLED=raw.get("CANCELLED", 0),
         )
+    
+    def get_project_tasks(self, project_id: int) -> list[Task]:
+        return self.repo.get_by_project(project_id)

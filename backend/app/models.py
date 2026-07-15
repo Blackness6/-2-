@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -74,6 +75,12 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
+    project_membership: Mapped[List["ProjectMember"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+
 
 class Project(Base):
     __tablename__ = "projects"
@@ -123,6 +130,12 @@ class Project(Base):
 
     tasks: Mapped[List["Task"]] = relationship(
         back_populates="project",
+        passive_deletes=True,
+    )
+
+    members: Mapped[List["ProjectMember"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
         passive_deletes=True,
     )
 
@@ -232,4 +245,45 @@ class Task(Base):
     # Объект проекта
     project: Mapped[Optional["Project"]] = relationship(
         back_populates="tasks",
+    )
+
+class ProjectMember(Base):
+    __tablename__= "project_members"
+
+    id: Mapped[int] = mapped_column(
+        Integer().with_variant(BigInteger(), "postgresql"),
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ) 
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    role: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="member",
+    )   
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    project: Mapped["Project"] = relationship(back_populates="members")
+
+    user: Mapped["User"] = relationship(back_populates="project_membership")
+
+    __table_args__=(
+        UniqueConstraint("project_id", "user_id", name="uq_project_members_project_user"),
     )

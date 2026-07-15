@@ -194,3 +194,26 @@ class ProjectResponse(BaseModel):
         from_attributes=True,
     )
 
+# =========================
+# PROJECT MEMBER SCHEMAS
+# =========================
+
+class ProjectRole(str, Enum):
+    OWNER = "owner"
+    MANAGER = "manager"
+    MEMBER = "member"
+
+class ProjectMemberCreate(BaseModel):
+    user_id: int = Field(..., gt = 0)
+    role: ProjectRole = ProjectRole.MEMBER
+
+class ProjectMemberResponse(BaseModel):
+    id: int | None = None
+    project_id: int
+    user_id: int
+    role: ProjectRole
+    user: UserShortResponse
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )        

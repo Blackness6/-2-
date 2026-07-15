@@ -1,3 +1,5 @@
+import type { UserShort } from "./user";
+
 export interface Project {
   id: number;
   name: string;
@@ -16,4 +18,19 @@ export interface ProjectCreate {
 export interface ProjectUpdate {
   name?: string;
   description?: string | null;
+}
+
+export type ProjectRole = "owner" | "manager" | "member";
+
+export interface ProjectMember {
+  id: number | null;        // null у владельца (синтетическая запись)
+  project_id: number;
+  user_id: number;
+  role: ProjectRole;
+  user: UserShort;
+}
+
+export interface ProjectMemberCreate {
+  user_id: number;
+  role: ProjectRole;        // "manager" | "member"
 }
