@@ -54,5 +54,10 @@ class AppProvider(Provider):
         return ProjectRepository(db)
 
     @provide(scope=Scope.REQUEST)
-    def get_project_service(self, db: Session, repo: IProjectRepository) -> ProjectService:
-        return ProjectService(db, repo)
+    def get_project_service(
+        self,
+        db: Session,
+        repo: IProjectRepository,
+        user_repo: IUserRepository,
+    ) -> ProjectService:
+        return ProjectService(db, repo, user_repo)

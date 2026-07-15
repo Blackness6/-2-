@@ -69,3 +69,10 @@ class TaskRepository(ITaskRepository):
             .group_by(Task.status)
         ).all()
         return {row.status: row.cnt for row in rows}
+    
+
+    def get_by_project(self, project_id: int) -> list[Task]:
+        """Все задачи проекта (для его участников)."""
+        stmt = _with_users(select(Task).where(Task.project_id == project_id))
+        return list(self.db.scalars(stmt).all())
+        
