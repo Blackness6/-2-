@@ -8,15 +8,9 @@ class Base(DeclarativeBase):
     pass
 
 
-# get_engine() убрали — engine создаётся напрямую, параметр url нигде не нужен
+
 engine = create_engine(settings.DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
