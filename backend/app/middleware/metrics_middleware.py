@@ -38,8 +38,11 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         finally:
             duration_seconds = time.perf_counter() - start_time
 
+            # Берём шаблон маршрута ("/api/tasks/{task_id}"), а не сырой URL —
+            # иначе каждый уникальный ID раздувает кардинальность метрик.
+            # Незамэтченные пути (404) сводим к "unmatched" по той же причине.
             route = request.scope.get("route")
-            path = getattr(route, "path", request.url.path)
+            path = getattr(route, "path", None) or "unmatched"
 
             HTTP_REQUESTS_TOTAL.labels(
                 method=method,

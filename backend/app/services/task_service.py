@@ -1,19 +1,14 @@
-from datetime import datetime, timezone
-
 from fastapi import HTTPException
 from fastapi import status as http_status  # переименовали чтобы не конфликтовало
 from sqlalchemy.orm import Session
 
+from app.core.time import utcnow
 from app.models import Task
 
 from app.schemas import TaskAssign, TaskCreate, TaskUpdate, TaskStats
 
 from app.interfaces.task_repository import ITaskRepository
 from app.interfaces.user_repository import IUserRepository
-
-def _utcnow() -> datetime:
-    """Текущее время UTC без tzinfo (совместимо с SQLite)."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class TaskService:
@@ -30,7 +25,7 @@ class TaskService:
             )
 
     def create_task(self, data: TaskCreate, user_id: int, project_id: int | None = None) -> Task:
-        now = _utcnow()
+        now = utcnow()
 
         # Исполнитель опционален: если выбран — проверяем, что такой пользователь есть,
         # и запоминаем, кто его назначил (текущий пользователь из JWT).
@@ -86,10 +81,10 @@ class TaskService:
 
     def update_task(self, task_id: int, data: TaskUpdate, user_id: int) -> Task:
         task = self.get_task(task_id, user_id)
-        update_data = data.model_dump(exclude_none=True)
+        update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(task, field, value)
-        task.updated_at = _utcnow()
+        task.updated_at = utcnow()
         try:
             task = self.repo.update(task)
             self.db.commit()
@@ -117,7 +112,7 @@ class TaskService:
             task.assignee_id = data.assignee_id
             task.assigned_by_id = user_id
 
-        task.updated_at = _utcnow()
+        task.updated_at = utcnow()
         try:
             task = self.repo.update(task)
             self.db.commit()

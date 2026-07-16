@@ -37,14 +37,18 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Создать файл `.env`:
+3. Создать файл `.env` (см. `.env.example`):
 
 ```env
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=task_manager
-DB_USER=beibarys
+DB_USER=postgres
 DB_PASSWORD=postgres
+
+SECRET_KEY=<случайная-строка>
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
 4. Применить миграции:
@@ -61,15 +65,56 @@ uvicorn app.main:app --reload
 
 ## Эндпоинты
 
-| Метод    | URL                  | Описание                        |
-|----------|----------------------|---------------------------------|
-| `GET`    | `/`                  | Health check                    |
-| `POST`   | `/api/tasks`         | Создать задачу                  |
-| `GET`    | `/api/tasks`         | Список задач (фильтрация)       |
-| `GET`    | `/api/tasks/stats`   | Статистика по статусам          |
-| `GET`    | `/api/tasks/{id}`    | Получить задачу по ID           |
-| `PATCH`  | `/api/tasks/{id}`    | Обновить задачу                 |
-| `DELETE` | `/api/tasks/{id}`    | Удалить задачу                  |
+Все эндпоинты, кроме `/`, `/metrics` и `/auth/*`, требуют заголовок
+`Authorization: Bearer <token>`.
+
+### Служебные
+
+| Метод | URL        | Описание                       |
+|-------|------------|--------------------------------|
+| `GET` | `/`        | Health check                   |
+| `GET` | `/metrics` | Метрики Prometheus             |
+
+### Аутентификация
+
+| Метод  | URL              | Описание                        |
+|--------|------------------|---------------------------------|
+| `POST` | `/auth/register` | Регистрация пользователя        |
+| `POST` | `/auth/login`    | Логин, возвращает JWT-токен     |
+| `GET`  | `/auth/me`       | Текущий пользователь            |
+
+### Задачи
+
+| Метод    | URL                       | Описание                        |
+|----------|---------------------------|---------------------------------|
+| `POST`   | `/api/tasks`              | Создать задачу                  |
+| `GET`    | `/api/tasks`              | Список задач (фильтрация)       |
+| `GET`    | `/api/tasks/stats`        | Статистика по статусам          |
+| `GET`    | `/api/tasks/{id}`         | Получить задачу по ID           |
+| `PATCH`  | `/api/tasks/{id}`         | Обновить задачу                 |
+| `PATCH`  | `/api/tasks/{id}/assign`  | Назначить/снять исполнителя      |
+| `DELETE` | `/api/tasks/{id}`         | Удалить задачу                  |
+
+### Проекты
+
+| Метод    | URL                                       | Описание                     |
+|----------|-------------------------------------------|------------------------------|
+| `POST`   | `/api/projects`                           | Создать проект               |
+| `GET`    | `/api/projects`                           | Список проектов              |
+| `GET`    | `/api/projects/{id}`                      | Получить проект              |
+| `PATCH`  | `/api/projects/{id}`                      | Обновить проект (владелец)   |
+| `DELETE` | `/api/projects/{id}`                      | Удалить проект (владелец)    |
+| `POST`   | `/api/projects/{id}/tasks`                | Создать задачу в проекте     |
+| `GET`    | `/api/projects/{id}/tasks`                | Задачи проекта               |
+| `GET`    | `/api/projects/{id}/members`              | Участники проекта            |
+| `POST`   | `/api/projects/{id}/members`              | Добавить участника (владелец)|
+| `DELETE` | `/api/projects/{id}/members/{user_id}`    | Удалить участника (владелец) |
+
+### Пользователи
+
+| Метод | URL          | Описание                                  |
+|-------|--------------|-------------------------------------------|
+| `GET` | `/api/users` | Список пользователей (для выбора исполнителя) |
 
 ### Фильтрация списка
 
@@ -120,25 +165,28 @@ pytest tests/ -v
 ## Структура проекта
 
 ```
-task-api/
+backend/
 ├── app/
-│   ├── core/config.py          # Настройки через pydantic-settings
-│   ├── database.py             # Подключение к БД, get_db
-│   ├── models.py               # SQLAlchemy-модель Task
+│   ├── core/                   # config, security (JWT/bcrypt), logging, time
+│   ├── database.py             # Подключение к БД (engine, SessionLocal)
+│   ├── models.py               # SQLAlchemy-модели: User, Project, Task, ProjectMember
 │   ├── schemas.py              # Pydantic-схемы (запрос/ответ)
+│   ├── interfaces/             # Абстрактные интерфейсы репозиториев
 │   ├── repositories/           # Слой работы с БД
 │   ├── services/               # Бизнес-логика
 │   ├── routers/                # FastAPI-роутеры
+│   ├── middleware/             # Логирование и метрики запросов
+│   ├── observability/          # Определения метрик Prometheus
+│   ├── providers.py            # DI-контейнер (dishka)
 │   └── main.py                 # Точка входа
 ├── migrations/                 # Alembic-миграции
-├── tests/
-│   ├── conftest.py             # Фикстуры pytest (SQLite)
-│   └── test_takes.py           # 13 тестов
-├── docker-compose.yml
+├── tests/                      # pytest + SQLite in-memory
+├── docker-compose.yml          # Postgres + backend
 ├── Dockerfile
 ├── entrypoint.sh               # alembic upgrade head + uvicorn
-├── requirements.txt
-└── .env
+├── requirements.txt            # Прод-зависимости
+├── requirements-dev.txt        # pytest, httpx
+└── .env                        # Локальные настройки (не в git)
 ```
 
 ## Миграции
