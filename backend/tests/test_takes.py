@@ -5,14 +5,25 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.security import get_current_user_id
+from app.main import app
 
-# ─── Вспомогательная функция ───────────────────────────────────────────────
 
-def create_task(client: TestClient, title="Test task", priority=2, description=None):
+# ─── Вспомогательные функции ───────────────────────────────────────────────
+
+def create_task(client: TestClient, title="Test task", priority=2, description=None,
+                assignee_id=None):
     payload = {"title": title, "priority": priority}
     if description:
         payload["description"] = description
+    if assignee_id is not None:
+        payload["assignee_id"] = assignee_id
     return client.post("/api/tasks", json=payload)
+
+
+def login_as(user_id: int):
+    """Подменяем текущего пользователя (в conftest по умолчанию user_id=1)."""
+    app.dependency_overrides[get_current_user_id] = lambda: user_id
 
 
 # ─── Обязательные тесты (7 штук) ───────────────────────────────────────────
@@ -120,6 +131,99 @@ def test_missing_required_fields(client):
     """Создание без обязательного поля title — 422."""
     resp = client.post("/api/tasks", json={"priority": 2})
     assert resp.status_code == 422
+
+
+# ─── Назначение исполнителя ────────────────────────────────────────────────
+
+def test_create_task_with_assignee(client):
+    """Создание задачи с исполнителем: backend пишет creator, assignee и assigned_by."""
+    resp = create_task(client, "Assigned task", assignee_id=2)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["creator_id"] == 1
+    assert data["assignee_id"] == 2
+    assert data["assigned_by_id"] == 1
+    assert data["creator"]["username"] == "alice"
+    assert data["assignee"]["username"] == "bob"
+
+
+def test_create_task_with_unknown_assignee(client):
+    """Несуществующий исполнитель — 404."""
+    resp = create_task(client, "Bad assignee", assignee_id=999)
+    assert resp.status_code == 404
+
+
+def test_assignee_sees_assigned_task(client):
+    """Исполнитель видит назначенную ему задачу в своём списке."""
+    task_id = create_task(client, "For Bob", assignee_id=2).json()["id"]
+
+    login_as(2)
+    resp = client.get("/api/tasks")
+    assert resp.status_code == 200
+    assert [t["id"] for t in resp.json()] == [task_id]
+    assert client.get(f"/api/tasks/{task_id}").status_code == 200
+
+
+def test_assign_endpoint(client):
+    """Назначение исполнителя на уже созданную задачу."""
+    task_id = create_task(client, "Assign later").json()["id"]
+    resp = client.patch(f"/api/tasks/{task_id}/assign", json={"assignee_id": 2})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["assignee_id"] == 2
+    assert data["assigned_by_id"] == 1
+
+
+def test_reassign_task(client):
+    """Создатель может поменять исполнителя."""
+    task_id = create_task(client, "Reassign", assignee_id=2).json()["id"]
+    resp = client.patch(f"/api/tasks/{task_id}/assign", json={"assignee_id": 1})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["assignee_id"] == 1
+    assert data["assigned_by_id"] == 1
+
+
+def test_unassign_task(client):
+    """Создатель может убрать исполнителя: assignee и assigned_by обнуляются."""
+    task_id = create_task(client, "Unassign", assignee_id=2).json()["id"]
+    resp = client.patch(f"/api/tasks/{task_id}/assign", json={"assignee_id": None})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["assignee_id"] is None
+    assert data["assigned_by_id"] is None
+    assert data["assignee"] is None
+    assert data["assigned_by"] is None
+
+    # Бывший исполнитель больше не видит задачу
+    login_as(2)
+    assert client.get(f"/api/tasks/{task_id}").status_code == 404
+
+
+def test_only_creator_can_assign(client):
+    """Исполнитель не может переназначить чужую задачу — 403."""
+    task_id = create_task(client, "Protected", assignee_id=2).json()["id"]
+
+    login_as(2)
+    resp = client.patch(f"/api/tasks/{task_id}/assign", json={"assignee_id": 2})
+    assert resp.status_code == 403
+
+
+def test_stranger_does_not_see_task(client):
+    """Пользователь, не связанный с задачей, её не видит."""
+    task_id = create_task(client, "Private").json()["id"]
+
+    login_as(2)
+    assert client.get(f"/api/tasks/{task_id}").status_code == 404
+    assert client.get("/api/tasks").json() == []
+
+
+def test_users_list(client):
+    """Список пользователей для выбора исполнителя."""
+    resp = client.get("/api/users")
+    assert resp.status_code == 200
+    usernames = [u["username"] for u in resp.json()]
+    assert usernames == ["alice", "bob"]
 
 
 def test_stats_endpoint(client):

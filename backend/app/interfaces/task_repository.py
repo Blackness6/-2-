@@ -19,6 +19,7 @@ class ITaskRepository(ABC):
         user_id: int,
         status: str | None = None,
         priority: int | None = None,
+        project_id: int | None = None,
         ) ->  list[Task]:
         pass
 
@@ -32,4 +33,8 @@ class ITaskRepository(ABC):
 
     @abstractmethod
     def get_stats(self, user_id: int) ->  dict [str, int]:
+        pass
+
+    @abstractmethod
+    def get_by_project(self, project_id: int) -> "list[Task]":
         pass

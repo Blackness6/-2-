@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.security import get_current_user_id
 from app.database import Base
 from app.main import app
+from app.models import User
 from app.providers import AppProvider
 
 engine = create_engine(
@@ -31,9 +32,25 @@ class TestDatabaseProvider(Provider):
             db.close()
 
 
+def _seed_users():
+    """Задачи ссылаются на пользователей (creator/assignee) — сеем двух тестовых."""
+    db = TestSessionLocal()
+    try:
+        db.add_all([
+            User(id=1, username="alice", email="alice@test.com",
+                 hashed_password="x", role="user"),
+            User(id=2, username="bob", email="bob@test.com",
+                 hashed_password="x", role="user"),
+        ])
+        db.commit()
+    finally:
+        db.close()
+
+
 @pytest.fixture
 def client():
     Base.metadata.create_all(bind=engine)
+    _seed_users()
 
     container = make_async_container(TestDatabaseProvider(), AppProvider())
     app.state.dishka_container = container  # middleware already added in main.py
