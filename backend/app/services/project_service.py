@@ -1,21 +1,16 @@
-from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from fastapi import HTTPException
 from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
+from app.core.time import utcnow
 from app.models import Project, ProjectMember
 
 from app.schemas import ProjectCreate, ProjectUpdate, ProjectMemberCreate, ProjectRole
 
 from app.interfaces.project_repository import IProjectRepository
 from app.interfaces.user_repository import IUserRepository
-
-
-def _utcnow() -> datetime:
-    """Текущее время UTC без tzinfo (совместимо с SQLite)."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 # Роли, которым разрешено создавать и назначать задачи в проекте.
@@ -46,7 +41,7 @@ class ProjectService:
     # ---------- проекты ----------
 
     def create_project(self, data: ProjectCreate, user_id: int) -> Project:
-        now = _utcnow()
+        now = utcnow()
 
         project = Project(
             name=data.name,
@@ -82,7 +77,7 @@ class ProjectService:
         update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(project, field, value)
-        project.updated_at = _utcnow()
+        project.updated_at = utcnow()
         try:
             project = self.repo.update(project)
             self.db.commit()
@@ -148,7 +143,7 @@ class ProjectService:
             project_id=project_id,
             user_id=data.user_id,
             role=data.role.value,
-            created_at=_utcnow(),
+            created_at=utcnow(),
         )
         try:
             member = self.repo.add_member(member)

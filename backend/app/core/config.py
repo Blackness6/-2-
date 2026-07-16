@@ -21,9 +21,7 @@ class Settings(BaseSettings):
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
-    model_config = {"env_file": ".env", "extra": "ignore"}  
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()
-
-# TODO:

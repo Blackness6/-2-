@@ -2,7 +2,6 @@
 Тесты для Task Manager API.
 Используется SQLite in-memory через conftest.py.
 """
-import pytest
 from fastapi.testclient import TestClient
 
 from app.core.security import get_current_user_id
