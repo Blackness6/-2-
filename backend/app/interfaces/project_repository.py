@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from app.models import Project
-
 from app.models import Project, ProjectMember
 
 
