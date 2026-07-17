@@ -9,7 +9,6 @@ T = TypeVar("T", bound=Base)
 
 
 class BaseModelRepository(Generic[T]):
-    """Общий CRUD. Методы *_raw ищут без проверки прав доступа."""
 
     model: type[T]
 
