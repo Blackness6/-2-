@@ -5,7 +5,6 @@ from app.models import User
 
 from app.interfaces.user_repository import IUserRepository
 
-
 class UserRepository(IUserRepository):
     def __init__(self, db: Session):
         self.db = db

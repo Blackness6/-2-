@@ -12,14 +12,12 @@ router = APIRouter(
     route_class=DishkaRoute,
 )
 
-
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(
     data: UserCreate,
     service: FromDishka[AuthService],
 ):
     return service.register(data)
-
 
 @router.post("/login", response_model=Token)
 def login(
@@ -29,11 +27,9 @@ def login(
     token = service.login(data)
     return {"access_token": token, "token_type": "bearer"}
 
-
 @router.get("/me", response_model=UserResponse)
 def get_account(
     service: FromDishka[AuthService],
     user_id: int = Depends(get_current_user_id),
 ):
     return service.get_account(user_id)
-

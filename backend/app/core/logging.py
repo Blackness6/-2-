@@ -9,5 +9,3 @@ def setup_logging() -> None:
             "%(message)s"
         ),
     )
-
-    

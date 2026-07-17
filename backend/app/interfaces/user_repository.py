@@ -19,8 +19,3 @@ class IUserRepository(ABC):
     @abstractmethod
     def get_all(self) -> list[User]:
         pass
-
-
-
-
-

@@ -11,7 +11,6 @@ router = APIRouter(
     route_class=DishkaRoute,
 )
 
-
 # Список пользователей — чтобы на frontend выбрать исполнителя задачи
 @router.get("", response_model=list[UserShortResponse])
 def get_users(

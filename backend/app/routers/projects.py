@@ -15,7 +15,6 @@ router = APIRouter(
     route_class=DishkaRoute,
 )
 
-
 @router.post("", response_model=ProjectResponse, status_code=201)
 def create_project(
     data: ProjectCreate,
@@ -24,14 +23,12 @@ def create_project(
 ):
     return service.create_project(data, user_id)
 
-
 @router.get("", response_model=list[ProjectResponse])
 def get_projects(
     service: FromDishka[ProjectService],
     user_id: int = Depends(get_current_user_id),
 ):
     return service.get_projects(user_id)
-
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(
@@ -41,7 +38,6 @@ def get_project(
 ):
     return service.get_project(project_id, user_id)
 
-
 @router.patch("/{project_id}", response_model=ProjectResponse)
 def update_project(
     project_id: int,
@@ -50,7 +46,6 @@ def update_project(
     user_id: int = Depends(get_current_user_id),
 ):
     return service.update_project(project_id, data, user_id)
-
 
 @router.delete("/{project_id}", status_code=204)
 def delete_project(
@@ -70,7 +65,6 @@ def create_project_task(
 ):
     project_service.ensure_can_manage_tasks(project_id, user_id)  # владелец/менеджер, иначе 403/404
     return task_service.create_task(data, user_id, project_id)
-
 
 @router.get("/{project_id}/tasks", response_model=list[TaskResponse])
 def get_project_tasks(
@@ -93,7 +87,6 @@ def list_members(
 ):
     return service.list_members(project_id, user_id)
 
-
 @router.post("/{project_id}/members", response_model=ProjectMemberResponse, status_code=201)
 def add_member(
     project_id: int,
@@ -102,7 +95,6 @@ def add_member(
     user_id: int = Depends(get_current_user_id),
 ):
     return service.add_member(project_id, data, user_id)
-
 
 @router.delete("/{project_id}/members/{member_user_id}", status_code=204)
 def remove_member(
