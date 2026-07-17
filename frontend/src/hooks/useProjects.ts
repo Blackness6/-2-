@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import * as projectApi from "../api/projectApi";
-import type { Project, ProjectCreate } from "../types/project";
+import type { Project, ProjectCreate, ProjectUpdate } from "../types/project";
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -32,6 +32,17 @@ export function useProjects() {
     }
   }
 
+  async function saveProject(project: Project, payload: ProjectUpdate) {
+    try {
+      const updated = await projectApi.updateProject(project.id, payload);
+      setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      return true;
+    } catch {
+      setError("Не удалось обновить проект");
+      return false;
+    }
+  }
+
   async function removeProject(project: Project) {
     if (!confirm(`Удалить проект "${project.name}"?`)) return;
     try {
@@ -42,5 +53,5 @@ export function useProjects() {
     }
   }
 
-  return { projects, loading, error, createProject, removeProject };
+  return { projects, loading, error, createProject, saveProject, removeProject };
 }
