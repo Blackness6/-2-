@@ -8,7 +8,6 @@ class ITaskRepository(ABC):
     def create(self , task : Task) ->  Task:
         pass
 
-
     @abstractmethod
     def get_by_id(self, task_id : int, user_id: int) -> Task | None:
         pass

@@ -59,7 +59,6 @@ def root():
         "docs": "/docs",
     }
 
-
 @app.get("/metrics",include_in_schema=False)
 def metrics():
     return Response(

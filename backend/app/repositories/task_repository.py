@@ -10,7 +10,6 @@ def _visible_to(user_id: int):
     """Пользователь видит задачу, если он её создатель или исполнитель."""
     return or_(Task.creator_id == user_id, Task.assignee_id == user_id)
 
-
 def _with_users(stmt):
     """Жадно подгружаем creator/assigned_by/assignee для сериализации ответа."""
     return stmt.options(
@@ -18,7 +17,6 @@ def _with_users(stmt):
         selectinload(Task.assigned_by),
         selectinload(Task.assignee),
     )
-
 
 class TaskRepository(ITaskRepository):
     def __init__(self, db: Session):
@@ -70,7 +68,6 @@ class TaskRepository(ITaskRepository):
         ).all()
         return {row.status: row.cnt for row in rows}
     
-
     def get_by_project(self, project_id: int) -> list[Task]:
         """Все задачи проекта (для его участников)."""
         stmt = _with_users(select(Task).where(Task.project_id == project_id))

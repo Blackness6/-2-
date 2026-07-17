@@ -9,7 +9,6 @@ from app.core.config import settings
 
 http_bearer = HTTPBearer()
 
-
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -39,7 +38,6 @@ def decode_access_token(token: str) -> dict:
         return payload
     except JWTError:
         raise ValueError("Invalid token")
-
 
 def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(http_bearer)) -> int:
     credentials_error = HTTPException(

@@ -11,7 +11,6 @@ router = APIRouter(
     route_class=DishkaRoute,
 )
 
-
 @router.post("", response_model=TaskResponse, status_code=201)
 def create_task(
     data: TaskCreate,
@@ -20,14 +19,12 @@ def create_task(
 ):
     return service.create_task(data, user_id)
 
-
 @router.get("/stats", response_model=TaskStats)
 def get_stats(
     service: FromDishka[TaskService],
     user_id: int = Depends(get_current_user_id),
 ):
     return service.get_stats(user_id)
-
 
 @router.get("", response_model=list[TaskResponse])
 def get_tasks(
@@ -38,7 +35,6 @@ def get_tasks(
 ):
     return service.get_tasks(user_id=user_id, status=status, priority=priority)
 
-
 @router.get("/{task_id}", response_model=TaskResponse)
 def get_task(
     task_id: int,
@@ -46,7 +42,6 @@ def get_task(
     user_id: int = Depends(get_current_user_id),
 ):
     return service.get_task(task_id, user_id)
-
 
 @router.patch("/{task_id}", response_model=TaskResponse)
 def update_task(
@@ -57,7 +52,6 @@ def update_task(
 ):
     return service.update_task(task_id, data, user_id)
 
-
 @router.patch("/{task_id}/assign", response_model=TaskResponse)
 def assign_task(
     task_id: int,
@@ -66,7 +60,6 @@ def assign_task(
     user_id: int = Depends(get_current_user_id),
 ):
     return service.assign_task(task_id, data, user_id)
-
 
 @router.delete("/{task_id}", status_code=204)
 def delete_task(
