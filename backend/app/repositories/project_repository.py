@@ -1,14 +1,14 @@
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.models import Project, ProjectMember, Task
 
 from app.interfaces.project_repository import IProjectRepository
+from app.repositories.base_repository import BaseModelRepository
 
 
-class ProjectRepository(IProjectRepository):
-    def __init__(self, db: Session):
-        self.db = db
+class ProjectRepository(BaseModelRepository[Project], IProjectRepository):
+    model = Project
 
     def _member_exists(self, user_id: int):
         """Коррелированный EXISTS: текущий пользователь — участник проекта."""
@@ -20,12 +20,6 @@ class ProjectRepository(IProjectRepository):
             )
             .exists()
         )
-
-    def create(self, project: Project) -> Project:
-        self.db.add(project)
-        self.db.flush()
-        self.db.refresh(project)
-        return project
 
     def get_by_id(self, project_id: int, user_id: int) -> Project | None:
         # Доступ: владелец ИЛИ участник
@@ -48,15 +42,6 @@ class ProjectRepository(IProjectRepository):
             project.task_count = count
             projects.append(project)
         return projects
-
-    def update(self, project: Project) -> Project:
-        self.db.flush()
-        self.db.refresh(project)
-        return project
-
-    def delete(self, project: Project) -> None:
-        self.db.delete(project)
-        self.db.flush()
 
     # ---------- участники ----------
 

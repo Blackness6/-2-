@@ -1,9 +1,10 @@
 from sqlalchemy import or_, select, func
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.models import Task
 
 from app.interfaces.task_repository import ITaskRepository
+from app.repositories.base_repository import BaseModelRepository
 
 
 def _visible_to(user_id: int):
@@ -18,15 +19,8 @@ def _with_users(stmt):
         selectinload(Task.assignee),
     )
 
-class TaskRepository(ITaskRepository):
-    def __init__(self, db: Session):
-        self.db = db
-
-    def create(self, task: Task) -> Task:
-        self.db.add(task)
-        self.db.flush()
-        self.db.refresh(task)
-        return task
+class TaskRepository(BaseModelRepository[Task], ITaskRepository):
+    model = Task
 
     def get_by_id(self, task_id: int, user_id: int) -> Task | None:
         stmt = _with_users(
@@ -50,15 +44,6 @@ class TaskRepository(ITaskRepository):
             stmt = stmt.where(Task.project_id == project_id)
         return list(self.db.scalars(stmt).all())
 
-    def update(self, task: Task) -> Task:
-        self.db.flush()
-        self.db.refresh(task)
-        return task
-
-    def delete(self, task: Task) -> None:
-        self.db.delete(task)
-        self.db.flush()
-
     def get_stats(self, user_id: int) -> dict[str, int]:
         """GROUP BY статус — SQL-агрегация (только видимые пользователю задачи)."""
         rows = self.db.execute(
@@ -67,9 +52,8 @@ class TaskRepository(ITaskRepository):
             .group_by(Task.status)
         ).all()
         return {row.status: row.cnt for row in rows}
-    
+
     def get_by_project(self, project_id: int) -> list[Task]:
         """Все задачи проекта (для его участников)."""
         stmt = _with_users(select(Task).where(Task.project_id == project_id))
         return list(self.db.scalars(stmt).all())
-        
