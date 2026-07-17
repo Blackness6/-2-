@@ -9,7 +9,7 @@ import "../Tasks/TasksPage.css";
 
 export default function Projects() {
   const { user, logout } = useAuth();
-  const { projects, loading, error, createProject, removeProject } = useProjects();
+  const { projects, loading, error, createProject, saveProject, removeProject } = useProjects();
 
   return (
     <div className="tasks-page">
@@ -34,7 +34,7 @@ export default function Projects() {
       ) : (
         <ul className="task-list">
           {projects.map((p) => (
-            <ProjectCard key={p.id} project={p} onDelete={removeProject} />
+            <ProjectCard key={p.id} project={p} onSave={saveProject} onDelete={removeProject} />
           ))}
         </ul>
       )}
