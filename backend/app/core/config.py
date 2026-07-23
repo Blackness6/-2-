@@ -13,9 +13,6 @@ class Settings(BaseSettings):
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    METRICS_USER: str = "metrics"
-    METRICS_PASSWORD: str = ""
-
     @property
     def DATABASE_URL(self) -> str:
         return (
