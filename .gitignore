@@ -1,2 +1,5 @@
 # Секреты и локальное окружение (значения — только на машине/в CI, не в репозитории)
 .env
+
+# Пароль для scrape /metrics (Prometheus password_file) — секрет, не коммитить
+monitoring/prometheus/metrics_password
