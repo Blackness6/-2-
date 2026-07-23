@@ -16,7 +16,7 @@ from starlette.responses import Response
 
 import secrets
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBasic, HTTPAuthorizationCredentials, HTTPBasicCredentials
 
 from app.core.config import settings
 
